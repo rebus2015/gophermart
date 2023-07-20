@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"	
+	"github.com/rs/zerolog/log"
 )
 type config interface{
 	GetLogLevel() (string)

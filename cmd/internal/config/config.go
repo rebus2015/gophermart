@@ -22,7 +22,7 @@ func GetConfig() (*Config, error) {
 	flag.StringVar(&conf.RunAddress, "a", "127.0.0.1:8080", "Server address")
 	flag.DurationVar(&conf.SyncInterval, "i", time.Second*30, "Accrual system data request interval")
 	flag.StringVar(&conf.AccruralAddr, "r", "127.0.0.1:8088", "Accrual system address")
-	flag.StringVar(&conf.ConnectionString, "d", "", "Database connection string(PostgreSql)")
+	flag.StringVar(&conf.ConnectionString, "d", "postgresql://pguser:pgpwd@localhost:5432/gophermart?sslmode=disable", "Database connection string(PostgreSql)")
 	// postgresql://pguser:pgpwd@localhost:5432/devops?sslmode=disable
 	flag.StringVar(&conf.LogLevel, "l", "info",
 		"logger verbosity level, crit | error | info | debug")
@@ -40,4 +40,8 @@ func (conf *Config) GetLogLevel() string {
 }
 func (conf *Config) GetLogMode() string {
 	return conf.Mode
+}
+
+func (conf *Config) GetDbConnection() string {
+	return conf.ConnectionString
 }

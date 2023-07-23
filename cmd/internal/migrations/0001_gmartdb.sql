@@ -78,7 +78,7 @@ FROM users u;
 
 alter table user_balance
     owner to pguser;
-create function user_add(_login character varying, _hash bytea) returns uuid
+create function user_add(_login character varying, _hash bytea) returns character varying
     language sql
 as
 $$
@@ -86,19 +86,23 @@ $$
 values (gen_random_uuid (),_hash,_login)
 ON CONFLICT on constraint users_un
 do nothing
-returning id;
+returning cast(id as varchar);
 $$;
 
 alter function user_add(varchar, bytea) owner to pguser;
 
-create function user_check(_login character varying, _hash bytea) returns uuid
+create or replace function public.user_check(_login character varying, OUT id character varying, OUT hash bytea) returns record
     language sql
 as
 $$
-   select id from users where login =_login and hash = _hash
-$$;
+   select
+       cast(u.id as varchar) as id,
+       u.hash AS hash
+   from users u
+   where login =_login
+    $$;
 
-alter function user_check(varchar, bytea) owner to pguser;
+alter function public.user_check(varchar, out varchar, out bytea) owner to pguser;
 
 create function orders_all(_user_id uuid)
     returns TABLE(num bigint, status character varying, accural bigint, date_ins timestamp without time zone)

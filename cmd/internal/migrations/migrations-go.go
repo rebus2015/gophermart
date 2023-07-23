@@ -1,7 +1,6 @@
 package migrations
 
 import (
-	"context"
 	"embed"
 	"fmt"
 
@@ -18,24 +17,24 @@ type dbConfig interface {
 //go:embed *.sql
 var embedMigrations embed.FS
 
-func RunMigrations(ctx context.Context, config dbConfig) error {
+func RunMigrations(lg *logger.Logger, config dbConfig) error {
 
 	goose.SetBaseFS(embedMigrations)
 
 	db, err := goose.OpenDBWithDriver("pgx", config.GetDbConnection())
 	if err != nil {
-		logger.New(ctx).Fatalf("goose: failed to open DB: %v\n", err)
+		lg.Error().Err(err).Msgf("goose: failed to open DB: %v\n", config.GetDbConnection())
 		return fmt.Errorf("goose: failed to open DB: %v\n", err)
 	}
 
 	defer func() {
 		if err := db.Close(); err != nil {
-			logger.New(ctx).Fatalf("goose: failed to open DB: %v\n", err)
+			lg.Error().Err(err).Msgf("goose: failed to open DB: %v\n", config.GetDbConnection())
 		}
 	}()
 
 	if err := goose.Up(db, "."); err != nil {
-		logger.New(ctx).Fatalf("goose: failed to Up migrations: %v\n", err)
+		lg.Error().Err(err).Msg("goose: failed to Up migrations\n")
 		return fmt.Errorf("goose: failed to Up migrations: %v\n", err)
 
 	}

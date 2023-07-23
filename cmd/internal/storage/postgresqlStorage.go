@@ -64,14 +64,14 @@ func (pgs *PostgreSQLStorage) UserLogin(user *model.User) (*model.User, error) {
 	var id sql.NullString
 	var hash []byte
 	row := tx.QueryRowContext(ctx, userLoginQuery, args)
-	errg := row.Scan(&id,&hash)
+	errg := row.Scan(&id, &hash)
 	if errg != nil {
 		pgs.log.Printf("Error log in user:[%v] query '%s' error: %v", user.Login, userAddQuery, err)
 		return nil, fmt.Errorf("Error log in user:[%v] query '%s' error: %v", user.Login, userAddQuery, err)
 	}
 	// шаг 4 — сохраняем изменения
 	err = tx.Commit()
-	if err != nil || !id.Valid{
+	if err != nil || !id.Valid {
 
 		return nil, fmt.Errorf("failed to execute transaction %w", err)
 	}
@@ -117,7 +117,7 @@ func (pgs *PostgreSQLStorage) UserRegister(user *model.User) (string, error) {
 
 	return id.String, nil
 }
-func (s *PostgreSQLStorage) OrdersNew(user *model.User, order *model.Order) error {
+func (s *PostgreSQLStorage) OrdersNew(order *model.Order) error {
 	return nil
 }
 func (s *PostgreSQLStorage) OrdersAll(user *model.User) (*[]model.Order, error) {

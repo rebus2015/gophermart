@@ -38,11 +38,11 @@ func (m *middlewares) BasicAuthMiddleware(next http.Handler) http.Handler {
 			w.Write([]byte(`{"message": "No basic auth present"}`))
 			return
 		}
-		usr := model.User{
+		usr := &model.User{
 			Login:    username,
 			Password: password,
 		}
-		expectedUser, err := m.r.UserLogin(&usr)
+		expectedUser, err := m.r.UserLogin(usr)
 		if err != nil {
 			m.l.Error().Err(err).Msgf("failed to get auth params for user:%s", username)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -52,7 +52,9 @@ func (m *middlewares) BasicAuthMiddleware(next http.Handler) http.Handler {
 
 		if utils.CheckPasswordHash(password, string(expectedUser.Hash)) {
 			m.l.Info().Msgf("user '%s' is successfully authorized", username)
-			next.ServeHTTP(w, r)
+			usr.Id = expectedUser.Id
+			ctx := context.WithValue(r.Context(), keys.UserContextKey{}, usr)
+			next.ServeHTTP(w, r.WithContext(ctx))
 			return
 		}
 
@@ -110,12 +112,21 @@ func (m *middlewares) UserJSONMiddleware(next http.Handler) http.Handler {
 func (m *middlewares) LuhnCheckMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var reader io.Reader
-		if r.Header.Get(`Content-Type`)!= "text/plain"{
+		user, ok := r.Context().Value(keys.UserContextKey{}).(*model.User)
+		if !ok {
+			m.l.Error().Msgf(
+				"Error: [UserRegisterHandler] User info not found in context status-'500'",
+			)
+			http.Error(w, "User info not found in context", http.StatusInternalServerError)
+			return
+		}
+
+		if r.Header.Get(`Content-Type`) != "text/plain" {
 			m.l.Error().Msg("LuhnCheckMiddleware: Error reading request.Body, supposed 'text/plain' content type")
 			http.Error(w, "LuhnCheckMiddleware: Error reading request.Body, supposed 'text/plain' content type",
-			http.StatusBadRequest)
-			return		
-		}		
+				http.StatusBadRequest)
+			return
+		}
 		if r.Header.Get(`Content-Encoding`) == compressed {
 			gz, err := gzip.NewReader(r.Body)
 			if err != nil {
@@ -128,26 +139,31 @@ func (m *middlewares) LuhnCheckMiddleware(next http.Handler) http.Handler {
 		} else {
 			reader = r.Body
 		}
-		number,err:=io.ReadAll(reader)
-		if err!=nil {
-			m.l.Debug().Msgf("Failed to retrieve request body from: %v",r.RequestURI)
+		number, err := io.ReadAll(reader)
+		if err != nil {
+			m.l.Debug().Msgf("Failed to retrieve request body from: %v", r.RequestURI)
 			http.Error(w, err.Error(), http.StatusBadRequest)
-			return 
+			return
 		}
-		m.l.Debug().Msgf("Retrieved request body: %v",number) 
-		order,err := strconv.ParseInt(string(number),10,64)
-		if err!=nil{
-			m.l.Debug().Msgf("Failed to convert request body to Int64: %s",string(number))
+		m.l.Debug().Msgf("Retrieved request body: %v", number)
+		orderNum, err := strconv.ParseInt(string(number), 10, 64)
+		if err != nil {
+			m.l.Debug().Msgf("Failed to convert request body to Int64: %s", string(number))
 			http.Error(w, err.Error(), http.StatusBadRequest)
-			return 
+			return
 		}
-		if !utils.Valid(order){
-			m.l.Debug().Msgf("Error order format mismatch on Luhn check: %v",order)
+		if !utils.Valid(orderNum) {
+			m.l.Debug().Msgf("Error order format mismatch on Luhn check: %v", orderNum)
 			http.Error(w, err.Error(), http.StatusConflict)
-			return 
+			return
+		}
+		order := &model.Order{
+			UserId: user.Id,
+			Num:    &orderNum,
+			Status: "NEW",
 		}
 		m.l.Info().Msgf("Incoming request Method: %v, Order: %v", r.RequestURI, order)
 		ctx := context.WithValue(r.Context(), keys.OrderContextKey{}, order)
-		next.ServeHTTP(w, r.WithContext(ctx))		
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

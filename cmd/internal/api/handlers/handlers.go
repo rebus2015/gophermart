@@ -14,7 +14,7 @@ type repository interface {
 	UserRegister(user *model.User) (string, error)
 	UserLogin(user *model.User) (*model.User, error)
 	OrdersAll(user *model.User) (*[]model.Order, error)
-	OrdersNew(user *model.User, order *model.Order) error
+	OrdersNew(order *model.Order) error
 	Balance(user *model.User, orderNum string) (*model.Balance, error)
 	Withdraw(request *model.Withdraw) error
 	Withdrawals(user *model.User) (*[]model.Order, error)
@@ -87,7 +87,7 @@ func (a *api) UserLoginHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *api) UserOrderNewHandler(w http.ResponseWriter, r *http.Request) {
-	orderNum, ok := r.Context().Value(keys.OrderContextKey{}).(*int64)
+	orderNew, ok := r.Context().Value(keys.OrderContextKey{}).(*model.Order)
 	if !ok {
 		a.log.Printf(
 			"Error: [UserOrderNewHandler] Order info not found in context status-'500'",
@@ -95,26 +95,19 @@ func (a *api) UserOrderNewHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Order info not found in context", http.StatusInternalServerError)
 		return
 	}
-	user, ok := r.Context().Value(keys.UserContextKey{}).(*model.User)
-	if !ok {
-		a.log.Printf(
-			"Error: [UserRegisterHandler] User info not found in context status-'500'",
-		)
-		http.Error(w, "User info not found in context", http.StatusInternalServerError)
-		return
-	}
+
 	order := model.Order{
-		UserId: user.Id,
-		Num:    orderNum,
-		Status: "NEW",
+		UserId: orderNew.UserId,
+		Num:    orderNew.Num,
+		Status: orderNew.Status,
 		Ins:    time.Now(),
 	}
-	err := a.repo.OrdersNew(user, &order)
+	err := a.repo.OrdersNew(&order)
 	if err != nil { //ошибка запроса 500
 		a.log.Err(err).Msg("UserRegisterHandler failed to register, database error")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusAccepted)
-	a.log.Info().Msgf("User successfully registered: [%s]", user.Login)
+	a.log.Info().Msgf("Order number [%v] successfully added", *order.Num)
 }

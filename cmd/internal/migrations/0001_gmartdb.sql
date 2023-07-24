@@ -109,7 +109,9 @@ create function orders_all(_user_id uuid)
     language sql
 as
 $$
-SELECT  num, status, accural, date_ins
+SELECT  num, status,
+        case when status='PROCESSED' THEN accural ELSE NULL END,
+        date_ins
 FROM orders
 where user_id  = _user_id
 order by date_ins asc;
@@ -142,7 +144,7 @@ $$;
 
 alter function withdrawals_all(uuid) owner to pguser;
 
-create function order_add(_user_id uuid, _number bigint, _status character varying, _accural bigint) returns SETOF uuid
+create function order_add(_user_id uuid, _number bigint, _status character varying, _accural bigint) returns SETOF text
     language plpgsql
 as
 $$
@@ -154,12 +156,13 @@ from
 where
 	num = _number)
 then
-return query (select user_id from orders where num = _number);
+return query (select cast(user_id as text) from orders where num = _number);
 else
  begin
 	insert
 	into orders (user_id, num, status,	accural, date_ins)
     values (_user_id, _number, _status, _accural, default);
+    return query (select '' as user_id);
  end;
 end if;
 end;

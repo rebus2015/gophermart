@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"net/http"
 	"time"
 
@@ -14,7 +15,7 @@ type repository interface {
 	UserRegister(user *model.User) (string, error)
 	UserLogin(user *model.User) (*model.User, error)
 	OrdersAll(user *model.User) (*[]model.Order, error)
-	OrdersNew(order *model.Order) error
+	OrdersNew(order *model.Order) (string, error)
 	Balance(user *model.User, orderNum string) (*model.Balance, error)
 	Withdraw(request *model.Withdraw) error
 	Withdrawals(user *model.User) (*[]model.Order, error)
@@ -102,12 +103,59 @@ func (a *api) UserOrderNewHandler(w http.ResponseWriter, r *http.Request) {
 		Status: orderNew.Status,
 		Ins:    time.Now(),
 	}
-	err := a.repo.OrdersNew(&order)
+	id, err := a.repo.OrdersNew(&order)
 	if err != nil { //ошибка запроса 500
 		a.log.Err(err).Msg("UserRegisterHandler failed to register, database error")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	w.WriteHeader(http.StatusAccepted)
-	a.log.Info().Msgf("Order number [%v] successfully added", *order.Num)
+	switch id {
+	case "":
+		{
+			w.WriteHeader(http.StatusAccepted)
+			a.log.Info().Msgf("Order number [%v] successfully added", *order.Num)
+			return
+		}
+	case order.UserId:
+		{
+			w.WriteHeader(http.StatusOK)
+			a.log.Info().Msgf("Order number [%v] already exists for this user", *order.Num)
+		}
+	default:
+		{
+			w.WriteHeader(http.StatusConflict)
+			a.log.Warn().Msgf("Order number [%v] is already added by another user", *order.Num)
+		}
+	}
+}
+
+func (a *api) OrdersAllHandler(w http.ResponseWriter, r *http.Request) {
+	user, ok := r.Context().Value(keys.UserContextKey{}).(*model.User)
+	if !ok {
+		a.log.Error().Msgf(
+			"Error: [OrdersAllHandler] User info not found in context status-'500'",
+		)
+		http.Error(w, "User info not found in context", http.StatusInternalServerError)
+		return
+	}
+	ordersList, err := a.repo.OrdersAll(user)
+	if err != nil { //ошибка запроса 500
+		a.log.Err(err).Msgf("OrdersAllHandler failed to get orders for user [%v], database error", user.Login)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if len(*ordersList) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+		a.log.Info().Msgf("No Orders were found for user [%v]", user.Login)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	encoder := json.NewEncoder(w)
+	err = encoder.Encode(ordersList)
+	if err != nil {
+		a.log.Err(err).Msgf("Error: [OrdersAllHandler] Result Json encode error :%v", err)
+		http.Error(w, "[OrdersAllHandler] Result Json encode error", http.StatusInternalServerError)
+	}
+	a.log.Debug().Msgf("Возвращаем UpdateJSON result :%v", ordersList)
 }

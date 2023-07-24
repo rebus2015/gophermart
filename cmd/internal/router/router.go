@@ -14,6 +14,7 @@ type apiHandlers interface {
 	UserRegisterHandler(w http.ResponseWriter, r *http.Request)
 	UserLoginHandler(w http.ResponseWriter, r *http.Request)
 	UserOrderNewHandler(w http.ResponseWriter, r *http.Request)
+	OrdersAllHandler(w http.ResponseWriter, r *http.Request)
 }
 
 type apiMiddleware interface {
@@ -38,9 +39,10 @@ func NewRouter(m apiMiddleware, h apiHandlers) chi.Router {
 		r.Post("/login", h.UserLoginHandler)
 	})
 	r.Route("/api/user/orders", func(r chi.Router) {
-		r.With(m.BasicAuthMiddleware).
-			With(m.LuhnCheckMiddleware).
+		r.Use(m.BasicAuthMiddleware)
+		r.With(m.LuhnCheckMiddleware).
 			Post("/", h.UserOrderNewHandler)
+		r.Get("/", h.OrdersAllHandler)
 	})
 	return r
 }

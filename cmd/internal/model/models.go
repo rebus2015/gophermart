@@ -1,6 +1,9 @@
 package model
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 type User struct {
 	Id       string `json:"id,omitempty"`   //uuid пользователя
@@ -15,6 +18,22 @@ type Order struct {
 	Status   string    `json:"status"`                //статус заказа
 	Accrural *int64    `json:"accrual,omitempty"`     //начислено баллов лояльности
 	Ins      time.Time `json:"uploaded_at,omitempty"` //дата совершения
+}
+
+func (o *Order) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&struct {
+		UserId   string `json:"userid,omitempty"`
+		Num      *int64 `json:"number"`
+		Status   string `json:"status"`
+		Accrural *int64 `json:"accrual,omitempty"`
+		Ins      string `json:"uploaded_at,omitempty"`
+	}{
+		UserId:   o.UserId,
+		Num:      o.Num,
+		Status:   o.Status,
+		Accrural: o.Accrural,
+		Ins:      o.Ins.Format(time.RFC3339),
+	})
 }
 
 type Withdraw struct {

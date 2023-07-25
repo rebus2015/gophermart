@@ -191,13 +191,108 @@ func (pgs *PostgreSQLStorage) OrdersAll(user *model.User) (*[]model.Order, error
 	return ordersList, nil
 }
 
-func (s *PostgreSQLStorage) Balance(user *model.User, orderNum string) (*model.Balance, error) {
-	var b = model.Balance{}
+func (pgs *PostgreSQLStorage) Balance(user *model.User) (*model.Balance, error) {
+	ctx, cancel := context.WithCancel(pgs.context)
+	defer cancel()
+	tx, err := pgs.connection.BeginTx(ctx, &sql.TxOptions{ReadOnly: false})
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		rberr := tx.Rollback()
+		if rberr != nil {
+			pgs.log.Printf("failed to rollback transaction err: %v", rberr)
+		}
+	}()
+	args := pgx.NamedArgs{
+		"id": user.Id,
+	}
+
+	var balance sql.NullInt64
+	var expence sql.NullInt64
+	row := tx.QueryRowContext(ctx, balanceGetQuery, args)
+	errg := row.Scan(&balance, &expence)
+	if errg != nil {
+		pgs.log.Err(errg).Msgf("[Balance] failed to get balance for user:[%v] error: %v", user.Login, err)
+		return nil, fmt.Errorf("[Balance] failed to get balance for user:[%v] error: %v", user.Login, err)
+	}
+	// шаг 4 — сохраняем изменения
+	err = tx.Commit()
+	if err != nil || !expence.Valid {
+		return nil, fmt.Errorf("failed to execute transaction %w", err)
+	}
+
+	b := model.Balance{
+		Current: &balance.Int64,
+		Expence: &expence.Int64,
+	}
 	return &b, nil
 }
-func (s *PostgreSQLStorage) Withdraw(request *model.Withdraw) error {
-	return nil
+
+func (pgs *PostgreSQLStorage) Withdraw(request *model.Withdraw) (bool, error) {
+	ctx, cancel := context.WithCancel(pgs.context)
+	defer cancel()
+
+	tx, err := pgs.connection.BeginTx(ctx, &sql.TxOptions{ReadOnly: false})
+	if err != nil {
+		return false, err
+	}
+	defer func() {
+		rberr := tx.Rollback()
+		if rberr != nil {
+			pgs.log.Printf("failed to rollback transaction err: %v", rberr)
+		}
+	}()
+	args := pgx.NamedArgs{
+		"id":     request.UserId,
+		"num": request.Num,
+		"exp":    request.Expence,
+	}
+	var result sql.NullBool
+	errg := tx.QueryRowContext(ctx, withdrawQuery, args).Scan(&result)
+	if errg != nil {
+		pgs.log.Printf("StorageError: failed to withdraw [%v] points for user id [%v], query '%s' error: %v", request.Expence, request.UserId, withdrawQuery, err)
+		return false, fmt.Errorf("StorageError: failed to withdraw [%v] points for user id [%v], query '%s' error: %v", request.Expence, request.UserId, withdrawQuery, err)
+	}
+
+	// шаг 4 — сохраняем изменения
+	err = tx.Commit()
+	if err != nil {
+		return false, fmt.Errorf("failed to execute transaction %w", err)
+	}
+	return result.Bool, nil
 }
-func (s *PostgreSQLStorage) Withdrawals(user *model.User) (*[]model.Order, error) {
-	return new([]model.Order), nil
+
+func (pgs *PostgreSQLStorage) Withdrawals(user *model.User) (*[]model.Withdraw, error) {
+	ctx, cancel := context.WithTimeout(pgs.context, time.Second*5)
+	defer cancel()
+	args := pgx.NamedArgs{
+		"id": user.Id,
+	}
+	rows, err := pgs.connection.QueryContext(ctx, withdrawalsAllQuery, args)
+	if err != nil {
+		pgs.log.Err(err).Msgf("Error trying to get all orders, query: '%s' error: %v", ordersAllQuery, err)
+		return nil, fmt.Errorf("error trying to get all orders, query: '%s' error: %w", ordersAllQuery, err)
+	}
+	wdrsList := new([]model.Withdraw)
+	for rows.Next() {
+		var o dbWdr
+		err = rows.Scan(&o.Num, &o.Expence, &o.Ins)
+		if err != nil {
+			pgs.log.Err(err).Msgf("Error trying to Scan Rows error: %v", err)
+			return nil, fmt.Errorf("error trying to Scan Rows error: %w", err)
+		}
+		mo := model.Withdraw{}
+		mo.Num = &o.Num.Int64
+		mo.Expence = &o.Expence.Int64
+		mo.Ins = o.Ins.Time
+		*wdrsList = append(
+			*wdrsList, mo)
+	}
+	// проверяем на ошибки
+	err = rows.Err()
+	if err != nil {
+		return nil, err
+	}
+	return wdrsList, nil
 }

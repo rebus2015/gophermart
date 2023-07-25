@@ -4,6 +4,7 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -109,7 +110,60 @@ func (m *middlewares) UserJSONMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func (m *middlewares) LuhnCheckMiddleware(next http.Handler) http.Handler {
+func (m *middlewares) WithdrawJSONMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var reader io.Reader
+
+		user, ok := r.Context().Value(keys.UserContextKey{}).(*model.User)
+		if !ok {
+			m.l.Error().Msgf(
+				"Error: [UserRegisterHandler] User info not found in context status-'500'",
+			)
+			http.Error(w, "User info not found in context", http.StatusInternalServerError)
+			return
+		}
+
+		if r.Header.Get(`Content-Encoding`) == compressed {
+			gz, err := gzip.NewReader(r.Body)
+			if err != nil {
+				m.l.Printf("Failed to create gzip reader: %v", err.Error())
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			reader = gz
+			defer gz.Close()
+		} else {
+			reader = r.Body
+		}
+
+		wdr := &model.Withdraw{}
+		decoder := json.NewDecoder(reader)
+
+		if err := decoder.Decode(wdr); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if wdr.Num == nil {
+			http.Error(w, "Withdraw Number is empty", http.StatusBadRequest)
+			return
+		}
+		if wdr.Expence == nil {
+			http.Error(w, "Withdraw Expence is empty", http.StatusBadRequest)
+			return
+		}
+		if !utils.Valid(*wdr.Num) {
+			m.l.Debug().Msgf("Error withraw order num format mismatch on Luhn check: %v", wdr.Num)
+			http.Error(w, fmt.Sprintf("Error withraw order num format mismatch on Luhn check: %v", wdr.Num), http.StatusUnprocessableEntity)
+			return
+		}
+		wdr.UserId = user.Id
+		m.l.Printf("Incoming request Method: %v, Body: %v", r.RequestURI, user.Login)
+		ctx := context.WithValue(r.Context(), keys.WithdrwContextKey{}, wdr)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func (m *middlewares) OrderTexMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var reader io.Reader
 		user, ok := r.Context().Value(keys.UserContextKey{}).(*model.User)

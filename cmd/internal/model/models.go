@@ -37,10 +37,24 @@ func (o *Order) MarshalJSON() ([]byte, error) {
 }
 
 type Withdraw struct {
-	UserId  string    `json:"userid,omitempty"`      //uuid пользователя
-	Num     *int64    `json:"order"`                 //номер заказа
-	Expence *int64    `json:"sum"`                   //сумма списания баллов
-	Ins     time.Time `json:"uploaded_at,omitempty"` //дата совершения
+	UserId  string    `json:"userid,omitempty"`       //uuid пользователя
+	Num     *int64    `json:"order"`                  //номер заказа
+	Expence *int64    `json:"sum"`                    //сумма списания баллов
+	Ins     time.Time `json:"processed_at,omitempty"` //дата совершения
+}
+
+func (w *Withdraw) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&struct {
+		UserId  string `json:"userid,omitempty"`
+		Num     *int64 `json:"order"`
+		Expence *int64 `json:"sum"`
+		Ins     string `json:"processed_at,omitempty"`
+	}{
+		UserId:  w.UserId,
+		Num:     w.Num,
+		Expence: w.Expence,
+		Ins:     w.Ins.Format(time.RFC3339),
+	})
 }
 
 type Balance struct {

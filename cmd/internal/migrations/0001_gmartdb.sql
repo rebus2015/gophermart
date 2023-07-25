@@ -78,7 +78,8 @@ FROM users u;
 
 alter table user_balance
     owner to pguser;
-create function user_add(_login character varying, _hash bytea) returns character varying
+
+create or replace function user_add(_login character varying, _hash bytea) returns character varying
     language sql
 as
 $$
@@ -104,7 +105,7 @@ $$
 
 alter function public.user_check(varchar, out varchar, out bytea) owner to pguser;
 
-create function orders_all(_user_id uuid)
+create or replace function orders_all(_user_id uuid)
     returns TABLE(num bigint, status character varying, accural bigint, date_ins timestamp without time zone)
     language sql
 as
@@ -119,20 +120,32 @@ $$;
 
 alter function orders_all(uuid) owner to pguser;
 
-create function withdraw_add(_user_id uuid, _number bigint, _expence bigint) returns bigint
-    language sql
+create or replace function withdraw(_user_id uuid, _number bigint, _expence bigint) returns boolean
+    language plpgsql
 as
 $$
-INSERT INTO withdraws (user_id, num, expence, date_ins)
-values (_user_id, _number, _expence, default)
-on conflict on constraint withdraws_pk
-do nothing
-returning num;
+declare 
+    cur bigint;
+begin
+cur := (select b.balance from balance(_user_id) as b);
+if (cur > _expence)
+then
+    begin       
+       INSERT INTO withdraws (user_id, num, expence, date_ins)
+        values (_user_id, _number, _expence, default)
+        on conflict on constraint withdraws_pk
+        do nothing;
+       return true;
+    end;
+    else return false;
+end if;
+end;
 $$;
 
-alter function withdraw_add(uuid, bigint, bigint) owner to pguser;
+alter function withdraw(uuid, bigint, bigint) owner to pguser;
 
-create function withdrawals_all(_user_id uuid)
+
+create or replace function withdrawals_all(_user_id uuid)
     returns TABLE(num bigint, expence bigint, date_ins timestamp without time zone)
     language sql
 as
@@ -144,7 +157,7 @@ $$;
 
 alter function withdrawals_all(uuid) owner to pguser;
 
-create function order_add(_user_id uuid, _number bigint, _status character varying, _accural bigint) returns SETOF text
+create or replace function order_add(_user_id uuid, _number bigint, _status character varying, _accural bigint) returns SETOF text
     language plpgsql
 as
 $$
@@ -171,7 +184,7 @@ $$;
 
 alter function order_add(uuid, bigint, varchar, bigint) owner to pguser;
 
-create function balance(_user_id uuid)
+create or replace function balance(_user_id uuid)
     returns TABLE(balance bigint, expence bigint)
     language sql
 as

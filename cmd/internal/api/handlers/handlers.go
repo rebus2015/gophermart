@@ -16,9 +16,9 @@ type repository interface {
 	UserLogin(user *model.User) (*model.User, error)
 	OrdersAll(user *model.User) (*[]model.Order, error)
 	OrdersNew(order *model.Order) (string, error)
-	Balance(user *model.User, orderNum string) (*model.Balance, error)
-	Withdraw(request *model.Withdraw) error
-	Withdrawals(user *model.User) (*[]model.Order, error)
+	Balance(user *model.User) (*model.Balance, error)
+	Withdraw(request *model.Withdraw) (bool, error)
+	Withdrawals(user *model.User) (*[]model.Withdraw, error)
 }
 
 func NewApi(_repo repository, _log *logger.Logger) *api {
@@ -157,5 +157,94 @@ func (a *api) OrdersAllHandler(w http.ResponseWriter, r *http.Request) {
 		a.log.Err(err).Msgf("Error: [OrdersAllHandler] Result Json encode error :%v", err)
 		http.Error(w, "[OrdersAllHandler] Result Json encode error", http.StatusInternalServerError)
 	}
-	a.log.Debug().Msgf("Возвращаем UpdateJSON result :%v", ordersList)
+	a.log.Debug().Msgf("Возвращаем OrdersJSON result :%v", ordersList)
+}
+
+func (a *api) BalanceHandler(w http.ResponseWriter, r *http.Request) {
+	user, ok := r.Context().Value(keys.UserContextKey{}).(*model.User)
+	if !ok {
+		a.log.Error().Msgf(
+			"Error: [BalanceHandler] User info not found in context status-'500'",
+		)
+		http.Error(w, "User info not found in context", http.StatusInternalServerError)
+		return
+	}
+	balance, err := a.repo.Balance(user)
+	if err != nil { //ошибка запроса 500
+		a.log.Err(err).Msgf("BalanceHandler failed to get balance for user [%v], database error", user.Login)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	encoder := json.NewEncoder(w)
+	err = encoder.Encode(balance)
+	if err != nil {
+		a.log.Err(err).Msgf("Error: [BalanceHandler] Result Json encode error :%v", err)
+		http.Error(w, "[BalanceHandler] Result Json encode error", http.StatusInternalServerError)
+	}
+	a.log.Debug().Msgf("Возвращаем UpdateJSON result :%v", balance)
+}
+
+func (a *api) WithdrawHandler(w http.ResponseWriter, r *http.Request) {
+	withdrawNew, ok := r.Context().Value(keys.WithdrwContextKey{}).(*model.Withdraw)
+	if !ok {
+		a.log.Printf(
+			"Error: [WithdrawHandler] Withdraw info not found in context status-'500'",
+		)
+		http.Error(w, "Withdraw info not found in context", http.StatusInternalServerError)
+		return
+	}
+
+	withdraw := model.Withdraw{
+		UserId:  withdrawNew.UserId,
+		Num:     withdrawNew.Num,
+		Expence: withdrawNew.Expence,
+		Ins:     time.Now(),
+	}
+	success, err := a.repo.Withdraw(&withdraw)
+	if err != nil { //ошибка запроса 500
+		a.log.Err(err).Msg("WithdrawHandler failed to register, database error")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if !success {
+		w.WriteHeader(http.StatusPaymentRequired)
+		a.log.Error().Msgf("Withdraw FAIL, order number [%v]. Reason: balance is low.", withdraw.Num)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	a.log.Info().Msgf("Withdraw order number [%v] successfully added", withdraw.Num)
+}
+
+func (a *api) WithdrawalsAllHandler(w http.ResponseWriter, r *http.Request) {
+	user, ok := r.Context().Value(keys.UserContextKey{}).(*model.User)
+	if !ok {
+		a.log.Error().Msgf(
+			"Error: [WithdrawalsAllHandler] User info not found in context status-'500'",
+		)
+		http.Error(w, "User info not found in context", http.StatusInternalServerError)
+		return
+	}
+	wdrls, err := a.repo.Withdrawals(user)
+	if err != nil { //ошибка запроса 500
+		a.log.Err(err).Msgf("WithdrawalsAllHandler failed to get Withdrawals for user [%v], database error", user.Login)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if len(*wdrls) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+		a.log.Info().Msgf("No Withdrawals were found for user [%v]", user.Login)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	encoder := json.NewEncoder(w)
+	err = encoder.Encode(wdrls)
+	if err != nil {
+		a.log.Err(err).Msgf("Error: [Withdrawals] Result Json encode error :%v", err)
+		http.Error(w, "[Withdrawals] Result Json encode error", http.StatusInternalServerError)
+	}
+	a.log.Debug().Msgf("Возвращаем Withdrawals result :%v", wdrls)
 }

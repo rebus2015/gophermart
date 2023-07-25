@@ -1,4 +1,4 @@
-package storage
+package dbstorage
 
 import (
 	"context"
@@ -295,4 +295,38 @@ func (pgs *PostgreSQLStorage) Withdrawals(user *model.User) (*[]model.Withdraw, 
 		return nil, err
 	}
 	return wdrsList, nil
+}
+
+func (pgs *PostgreSQLStorage) AccruralUpdate(order *model.Order) error{
+	ctx, cancel := context.WithCancel(pgs.context)
+	defer cancel()
+
+	tx, err := pgs.connection.BeginTx(ctx, &sql.TxOptions{ReadOnly: false})
+	if err != nil {
+		return err
+	}
+	defer func() {
+		rberr := tx.Rollback()
+		if rberr != nil {
+			pgs.log.Printf("failed to rollback transaction err: %v", rberr)
+		}
+	}()
+	args := pgx.NamedArgs{
+		"num": order.Num,
+		"status":  order.Status,
+		"acc": order.Accrural,
+	}
+	
+	_, errg := tx.ExecContext(ctx, accUpdate, args)
+	if errg != nil {
+		pgs.log.Printf("Error AccruralUpdate order num:[%v] query '%s' error: %v", order.Num, accUpdate, err)
+		return fmt.Errorf("Error AccruralUpdate order num:[%v] query '%s' error: %v", order.Num, accUpdate, err)
+	}
+
+	// шаг 4 — сохраняем изменения
+	err = tx.Commit()
+	if err != nil {
+		return  fmt.Errorf("AccruralUpdate: failed to execute transaction %w", err)
+	}
+	return nil
 }

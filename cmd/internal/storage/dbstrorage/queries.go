@@ -1,4 +1,4 @@
-package storage
+package dbstorage
 
 import "database/sql"
 
@@ -10,6 +10,7 @@ const (
 	balanceGetQuery     string = "select * from balance(@id)"
 	withdrawQuery       string = "select * from withdraw(@id,@num,@exp)"
 	withdrawalsAllQuery string = "select * from withdrawals_all(@id)"
+	accUpdate           string = "select order_update(@num,@status,@acc)"
 )
 
 type dbOrder struct {
@@ -19,8 +20,8 @@ type dbOrder struct {
 	Ins      sql.NullTime
 }
 
-type dbWdr struct {	
-	Num      sql.NullInt64
-	Expence   sql.NullInt64	
-	Ins      sql.NullTime
+type dbWdr struct {
+	Num     sql.NullInt64
+	Expence sql.NullInt64
+	Ins     sql.NullTime
 }

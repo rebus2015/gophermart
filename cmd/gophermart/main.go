@@ -12,8 +12,9 @@ import (
 	"github.com/rebus2015/gophermart/cmd/internal/logger"
 	m "github.com/rebus2015/gophermart/cmd/internal/migrations"
 	"github.com/rebus2015/gophermart/cmd/internal/router"
-	"github.com/rebus2015/gophermart/cmd/internal/storage"
+	"github.com/rebus2015/gophermart/cmd/internal/storage/dbstorage"	
 )
+
 
 func main() {
 	cfg, err := config.GetConfig()
@@ -30,7 +31,7 @@ func main() {
 		lg.Fatal().Err(err).Msgf("Migrations retuned error")
 		return
 	}
-	repo, err := storage.NewStorage(ctx, lg, cfg)
+	repo, err := dbstorage.NewStorage(ctx, lg, cfg)
 	if err != nil {
 		lg.Fatal().Err(err).Msgf("Error creating dbStorage, with conn: %s", cfg.ConnectionString)
 		return

@@ -196,4 +196,16 @@ $$;
 
 alter function balance(uuid) owner to pguser;
 
+create or replace function order_update(_num bigint, _status character varying, _accrual bigint) returns void
+    language sql
+as
+$$
+update orders set
+                  status = _status,
+                  accural = _accrual
+    WHERE num = _num
+$$;
+
+alter function order_update(bigint, varchar, bigint) owner to pguser;
+
 -- +goose StatementEnd

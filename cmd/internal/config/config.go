@@ -39,3 +39,7 @@ func (conf *Config) IsDebug() bool {
 func (conf *Config) GetDbConnection() string {
 	return conf.ConnectionString
 }
+
+func (conf *Config) GetAccruralAddr() string {
+	return conf.AccruralAddr
+}

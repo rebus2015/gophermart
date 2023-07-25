@@ -208,4 +208,15 @@ $$;
 
 alter function order_update(bigint, varchar, bigint) owner to pguser;
 
+create function orders_acc()
+    returns TABLE(num bigint, status character varying)
+    language sql
+as
+$$
+SELECT  num, status
+FROM orders
+where status not in ('PROCESSED','INVALID')
+$$;
+
+alter function orders_all(uuid) owner to pguser;
 -- +goose StatementEnd

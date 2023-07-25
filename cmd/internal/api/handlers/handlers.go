@@ -21,13 +21,18 @@ type repository interface {
 	Withdrawals(user *model.User) (*[]model.Withdraw, error)
 }
 
-func NewApi(_repo repository, _log *logger.Logger) *api {
-	return &api{repo: _repo, log: _log}
+type memstorage interface {
+	Add(order *model.Order)
+}
+
+func NewApi(_repo repository, _log *logger.Logger, _ms memstorage) *api {
+	return &api{repo: _repo, log: _log, ms: _ms}
 }
 
 type api struct {
 	repo repository
 	log  *logger.Logger
+	ms   memstorage
 }
 
 func (a *api) UserRegisterHandler(w http.ResponseWriter, r *http.Request) {
@@ -112,6 +117,7 @@ func (a *api) UserOrderNewHandler(w http.ResponseWriter, r *http.Request) {
 	switch id {
 	case "":
 		{
+			a.ms.Add(&order)
 			w.WriteHeader(http.StatusAccepted)
 			a.log.Info().Msgf("Order number [%v] successfully added", *order.Num)
 			return

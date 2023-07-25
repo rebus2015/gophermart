@@ -13,6 +13,7 @@ import (
 	m "github.com/rebus2015/gophermart/cmd/internal/migrations"
 	"github.com/rebus2015/gophermart/cmd/internal/router"
 	"github.com/rebus2015/gophermart/cmd/internal/storage/dbstorage"
+	"github.com/rebus2015/gophermart/cmd/internal/storage/memstorage"
 )
 
 func main() {
@@ -35,7 +36,14 @@ func main() {
 		lg.Fatal().Err(err).Msgf("Error creating dbStorage, with conn: %s", cfg.ConnectionString)
 		return
 	}
-	h := handlers.NewApi(repo, lg)
+	orders := memstorage.NewStorage(ctx, repo, cfg, lg)
+	err = orders.Restore()
+	if err != nil {
+		lg.Fatal().Err(err).Msgf("MemStorage Restore failed")
+		return
+	}
+
+	h := handlers.NewApi(repo, lg, orders)
 	m := middleware.NewMiddlewares(repo, lg)
 	handle := router.NewRouter(m, h)
 

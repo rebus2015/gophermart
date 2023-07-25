@@ -72,7 +72,8 @@ func (m *middlewares) UserJSONMiddleware(next http.Handler) http.Handler {
 			gz, err := gzip.NewReader(r.Body)
 			if err != nil {
 				m.l.Printf("Failed to create gzip reader: %v", err.Error())
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte(fmt.Sprintf("Failed to create gzip reader: %v", err.Error())))
 				return
 			}
 			reader = gz
@@ -85,22 +86,26 @@ func (m *middlewares) UserJSONMiddleware(next http.Handler) http.Handler {
 		decoder := json.NewDecoder(reader)
 
 		if err := decoder.Decode(user); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(fmt.Sprintf("[UserJSONMiddleware] Failed to Decode gzip user: %v", err.Error())))
 			return
 		}
 
 		if user.Login == "" {
-			http.Error(w, "user.Login is empty", http.StatusBadRequest)
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(`"user.Login is empty"`))
 			return
 		}
 		if user.Password == "" {
-			http.Error(w, "user.Password is empty", http.StatusBadRequest)
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(`"user.Password is empty"`))
 			return
 		}
 
 		hash, err := utils.HashPassword(user.Password)
 		if err != nil {
-			http.Error(w, "user.Password is not valid, could not create Hash", http.StatusBadRequest)
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(`"user.Password is not valid, could not create Hash"`))
 			return
 		}
 		user.Hash = hash
@@ -119,7 +124,8 @@ func (m *middlewares) WithdrawJSONMiddleware(next http.Handler) http.Handler {
 			m.l.Error().Msgf(
 				"Error: [UserRegisterHandler] User info not found in context status-'500'",
 			)
-			http.Error(w, "User info not found in context", http.StatusInternalServerError)
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(fmt.Sprintf("Error: [UserRegisterHandler] User info not found in context status-'500'")))
 			return
 		}
 
@@ -127,7 +133,8 @@ func (m *middlewares) WithdrawJSONMiddleware(next http.Handler) http.Handler {
 			gz, err := gzip.NewReader(r.Body)
 			if err != nil {
 				m.l.Printf("Failed to create gzip reader: %v", err.Error())
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte(fmt.Sprintf("Failed to create gzip reader: %v", err.Error())))
 				return
 			}
 			reader = gz
@@ -140,20 +147,24 @@ func (m *middlewares) WithdrawJSONMiddleware(next http.Handler) http.Handler {
 		decoder := json.NewDecoder(reader)
 
 		if err := decoder.Decode(wdr); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(`"WithdrawJSONMiddleware failed to Decode Withdraw"`))
 			return
 		}
 		if wdr.Num == nil {
-			http.Error(w, "Withdraw Number is empty", http.StatusBadRequest)
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(`"Withdraw Number is empty"`))
 			return
 		}
 		if wdr.Expence == nil {
-			http.Error(w, "Withdraw Expence is empty", http.StatusBadRequest)
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(`"Withdraw Expence is empty"`))
 			return
 		}
 		if !utils.Valid(*wdr.Num) {
 			m.l.Debug().Msgf("Error withraw order num format mismatch on Luhn check: %v", wdr.Num)
-			http.Error(w, fmt.Sprintf("Error withraw order num format mismatch on Luhn check: %v", wdr.Num), http.StatusUnprocessableEntity)
+			w.WriteHeader(http.StatusUnprocessableEntity)
+			w.Write([]byte(fmt.Sprintf("Error withraw order num format mismatch on Luhn check: %v", wdr.Num)))
 			return
 		}
 		wdr.UserId = user.Id
@@ -171,21 +182,23 @@ func (m *middlewares) OrderTexMiddleware(next http.Handler) http.Handler {
 			m.l.Error().Msgf(
 				"Error: [UserRegisterHandler] User info not found in context status-'500'",
 			)
-			http.Error(w, "User info not found in context", http.StatusInternalServerError)
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(`"User info not found in context"`))
 			return
 		}
 
 		if r.Header.Get(`Content-Type`) != "text/plain" {
 			m.l.Error().Msg("LuhnCheckMiddleware: Error reading request.Body, supposed 'text/plain' content type")
-			http.Error(w, "LuhnCheckMiddleware: Error reading request.Body, supposed 'text/plain' content type",
-				http.StatusBadRequest)
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(`LuhnCheckMiddleware: Error reading request.Body, supposed 'text/plain' content type"`))
 			return
 		}
 		if r.Header.Get(`Content-Encoding`) == compressed {
 			gz, err := gzip.NewReader(r.Body)
 			if err != nil {
 				m.l.Printf("Failed to create gzip reader: %v", err.Error())
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte(fmt.Sprintf("Failed to create gzip reader: %v", err.Error())))
 				return
 			}
 			reader = gz
@@ -195,20 +208,20 @@ func (m *middlewares) OrderTexMiddleware(next http.Handler) http.Handler {
 		}
 		number, err := io.ReadAll(reader)
 		if err != nil {
-			m.l.Debug().Msgf("Failed to retrieve request body from: %v", r.RequestURI)
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(fmt.Sprintf("Failed to retrieve request body from: %v", r.RequestURI)))
 			return
 		}
 		m.l.Debug().Msgf("Retrieved request body: %v", number)
 		orderNum, err := strconv.ParseInt(string(number), 10, 64)
 		if err != nil {
-			m.l.Debug().Msgf("Failed to convert request body to Int64: %s", string(number))
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(fmt.Sprintf("Failed to convert request body to Int64: %s", string(number))))
 			return
 		}
 		if !utils.Valid(orderNum) {
-			m.l.Debug().Msgf("Error order format mismatch on Luhn check: %v", orderNum)
-			http.Error(w, err.Error(), http.StatusConflict)
+			w.WriteHeader(http.StatusConflict)
+			w.Write([]byte(fmt.Sprintf("Error order format mismatch on Luhn check: %v", string(number))))
 			return
 		}
 		order := &model.Order{

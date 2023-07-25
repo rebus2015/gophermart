@@ -12,9 +12,8 @@ import (
 	"github.com/rebus2015/gophermart/cmd/internal/logger"
 	m "github.com/rebus2015/gophermart/cmd/internal/migrations"
 	"github.com/rebus2015/gophermart/cmd/internal/router"
-	"github.com/rebus2015/gophermart/cmd/internal/storage/dbstorage"	
+	"github.com/rebus2015/gophermart/cmd/internal/storage/dbstorage"
 )
-
 
 func main() {
 	cfg, err := config.GetConfig()

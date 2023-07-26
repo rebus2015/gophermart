@@ -5,6 +5,7 @@ go 1.20
 require github.com/caarlos0/env v3.5.0+incompatible
 
 require (
+	github.com/gammazero/deque v0.2.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
@@ -16,6 +17,7 @@ require (
 )
 
 require (
+	github.com/gammazero/workerpool v1.1.3
 	github.com/go-chi/chi v1.5.4
 	github.com/go-chi/chi/v5 v5.0.10
 	github.com/jackc/pgx/v5 v5.4.2

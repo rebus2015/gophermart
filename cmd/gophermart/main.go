@@ -8,6 +8,7 @@ import (
 
 	"github.com/rebus2015/gophermart/cmd/internal/api/handlers"
 	"github.com/rebus2015/gophermart/cmd/internal/api/middleware"
+	"github.com/rebus2015/gophermart/cmd/internal/client"
 	"github.com/rebus2015/gophermart/cmd/internal/config"
 	"github.com/rebus2015/gophermart/cmd/internal/logger"
 	m "github.com/rebus2015/gophermart/cmd/internal/migrations"
@@ -46,6 +47,8 @@ func main() {
 	h := handlers.NewApi(repo, lg, orders)
 	m := middleware.NewMiddlewares(repo, lg)
 	handle := router.NewRouter(m, h)
+	accrualClient := client.NewClient(ctx, orders, cfg, lg)
+	accrualClient.Run()
 
 	srv := &http.Server{
 		Addr:         cfg.RunAddress,

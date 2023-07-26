@@ -52,8 +52,8 @@ func main() {
 
 	srv := &http.Server{
 		Addr:         cfg.RunAddress,
-		ReadTimeout:  60 * time.Second,
-		WriteTimeout: 60 * time.Second,
+		ReadTimeout:  160 * time.Second,
+		WriteTimeout: 160 * time.Second,
 		Handler:      handle,
 	}
 
@@ -64,5 +64,4 @@ func main() {
 	if err != nil {
 		lg.Fatal().Err(err).Msg("server exited with error")
 	}
-
 }

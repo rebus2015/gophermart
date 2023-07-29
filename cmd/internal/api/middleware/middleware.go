@@ -59,7 +59,7 @@ func (m *middlewares) BasicAuthMiddleware(next http.Handler) http.Handler {
 
 		if utils.CheckPasswordHash(password, string(expectedUser.Hash)) {
 			m.l.Info().Msgf("user '%s' is successfully authorized", username)
-			usr.Id = expectedUser.Id
+			usr.ID = expectedUser.ID
 			ctx := context.WithValue(r.Context(), keys.UserContextKey{}, usr)
 			next.ServeHTTP(w, r.WithContext(ctx))
 			return
@@ -206,7 +206,7 @@ func (m *middlewares) WithdrawJSONMiddleware(next http.Handler) http.Handler {
 			}
 			return
 		}
-		wdr.UserId = user.Id
+		wdr.UserID = user.ID
 		m.l.Printf("Incoming request Method: %v, Body: %v", r.RequestURI, user.Login)
 		ctx := context.WithValue(r.Context(), keys.WithdrwContextKey{}, wdr)
 		next.ServeHTTP(w, r.WithContext(ctx))
@@ -282,7 +282,7 @@ func (m *middlewares) OrderTexMiddleware(next http.Handler) http.Handler {
 			return
 		}
 		order := &model.Order{
-			UserId: user.Id,
+			UserID: user.ID,
 			Num:    &orderNum,
 			Status: "NEW",
 		}

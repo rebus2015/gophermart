@@ -11,7 +11,7 @@ import (
 )
 
 type dbConfig interface {
-	GetDbConnection() string
+	GetDBConnection() string
 }
 
 //go:embed *.sql
@@ -21,21 +21,21 @@ func RunMigrations(lg *logger.Logger, config dbConfig) error {
 
 	goose.SetBaseFS(embedMigrations)
 
-	db, err := goose.OpenDBWithDriver("pgx", config.GetDbConnection())
+	db, err := goose.OpenDBWithDriver("pgx", config.GetDBConnection())
 	if err != nil {
-		lg.Error().Err(err).Msgf("goose: failed to open DB: %v\n", config.GetDbConnection())
-		return fmt.Errorf("goose: failed to open DB: %v\n", err)
+		lg.Error().Err(err).Msgf("goose: failed to open DB: %v\n", config.GetDBConnection())
+		return fmt.Errorf("goose failed to open DB %v", err)
 	}
 
 	defer func() {
 		if err := db.Close(); err != nil {
-			lg.Error().Err(err).Msgf("goose: failed to open DB: %v\n", config.GetDbConnection())
+			lg.Error().Err(err).Msgf("goose: failed to open DB: %v\n", config.GetDBConnection())
 		}
 	}()
 
 	if err := goose.Up(db, "."); err != nil {
-		lg.Error().Err(err).Msg("goose: failed to Up migrations\n")
-		return fmt.Errorf("goose: failed to Up migrations: %v\n", err)
+		lg.Error().Err(err).Msg("goose failed to Up migrations")
+		return fmt.Errorf("goose failed to Up migrations: %v", err)
 
 	}
 	return nil

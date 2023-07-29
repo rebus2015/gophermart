@@ -39,7 +39,7 @@ func (conf *Config) IsDebug() bool {
 	return conf.Debug
 }
 
-func (conf *Config) GetDbConnection() string {
+func (conf *Config) GetDBConnection() string {
 	return conf.ConnectionString
 }
 

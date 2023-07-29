@@ -25,7 +25,7 @@ type memstorage interface {
 	Add(order *model.Order)
 }
 
-func NewApi(_repo repository, _log *logger.Logger, _ms memstorage) *api {
+func NewAPI(_repo repository, _log *logger.Logger, _ms memstorage) *api {
 	return &api{repo: _repo, log: _log, ms: _ms}
 }
 
@@ -103,7 +103,7 @@ func (a *api) UserOrderNewHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	order := model.Order{
-		UserId: orderNew.UserId,
+		UserID: orderNew.UserID,
 		Num:    orderNew.Num,
 		Status: orderNew.Status,
 		Ins:    time.Now(),
@@ -122,7 +122,7 @@ func (a *api) UserOrderNewHandler(w http.ResponseWriter, r *http.Request) {
 			a.log.Info().Msgf("Order number [%v] successfully added", *order.Num)
 			return
 		}
-	case order.UserId:
+	case order.UserID:
 		{
 			w.WriteHeader(http.StatusOK)
 			a.log.Info().Msgf("Order number [%v] already exists for this user", *order.Num)
@@ -203,7 +203,7 @@ func (a *api) WithdrawHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	withdraw := model.Withdraw{
-		UserId:  withdrawNew.UserId,
+		UserID:  withdrawNew.UserID,
 		Num:     withdrawNew.Num,
 		Expence: withdrawNew.Expence,
 		Ins:     time.Now(),

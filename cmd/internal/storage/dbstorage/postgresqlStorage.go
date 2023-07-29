@@ -19,11 +19,11 @@ type PostgreSQLStorage struct {
 }
 
 type dbConfig interface {
-	GetDbConnection() string
+	GetDBConnection() string
 }
 
 func NewStorage(ctx context.Context, lg *logger.Logger, conf dbConfig) (*PostgreSQLStorage, error) {
-	db, err := restoreDB(ctx, lg, conf.GetDbConnection())
+	db, err := restoreDB(ctx, lg, conf.GetDBConnection())
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +68,7 @@ func (pgs *PostgreSQLStorage) UserLogin(user *model.User) (*model.User, error) {
 	errg := row.Scan(&id, &hash)
 	if errg != nil {
 		pgs.log.Printf("Error log in user:[%v] query '%s' error: %v", user.Login, userAddQuery, err)
-		return nil, fmt.Errorf("Error log in user:[%v] query '%s' error: %v", user.Login, userAddQuery, err)
+		return nil, fmt.Errorf("error log in user [%v] query '%s' error: %v", user.Login, userAddQuery, err)
 	}
 	// шаг 4 — сохраняем изменения
 	err = tx.Commit()
@@ -77,7 +77,7 @@ func (pgs *PostgreSQLStorage) UserLogin(user *model.User) (*model.User, error) {
 		return nil, fmt.Errorf("failed to execute transaction %w", err)
 	}
 	userAcc := model.User{
-		Id:       id.String,
+		ID:       id.String,
 		Login:    user.Login,
 		Password: user.Password,
 		Hash:     string(hash),
@@ -108,7 +108,7 @@ func (pgs *PostgreSQLStorage) UserRegister(user *model.User) (string, error) {
 	errg := tx.QueryRowContext(ctx, userAddQuery, args).Scan(&id)
 	if errg != nil {
 		pgs.log.Printf("Error register user:[%v] query '%s' error: %v", user.Login, userAddQuery, err)
-		return "", fmt.Errorf("Error register user:[%v] query '%s' error: %v", user.Login, userAddQuery, err)
+		return "", fmt.Errorf("error register user [%v] query '%s' error: %v", user.Login, userAddQuery, err)
 	}
 
 	// шаг 4 — сохраняем изменения
@@ -135,15 +135,15 @@ func (pgs *PostgreSQLStorage) OrdersNew(order *model.Order) (string, error) {
 		}
 	}()
 	args := pgx.NamedArgs{
-		"id":     order.UserId,
+		"id":     order.UserID,
 		"number": order.Num,
 		"status": order.Status,
 	}
 	var id sql.NullString
 	errg := tx.QueryRowContext(ctx, orderAddQuery, args).Scan(&id)
 	if errg != nil {
-		pgs.log.Printf("StorageError: failed to add order [%v] for user id [%v], query '%s' error: %v", order.Num, order.UserId, orderAddQuery, err)
-		return "", fmt.Errorf("StorageError: failed to add order [%v] for user id [%v], query '%s' error: %v", order.Num, order.UserId, orderAddQuery, err)
+		pgs.log.Printf("StorageError: failed to add order [%v] for user id [%v], query '%s' error: %v", order.Num, order.UserID, orderAddQuery, err)
+		return "", fmt.Errorf("storageError. failed to add order [%v] for user id [%v], query '%s' error: %v", order.Num, order.UserID, orderAddQuery, err)
 	}
 
 	// шаг 4 — сохраняем изменения
@@ -158,7 +158,7 @@ func (pgs *PostgreSQLStorage) OrdersAll(user *model.User) (*[]model.Order, error
 	ctx, cancel := context.WithTimeout(pgs.context, time.Second*5)
 	defer cancel()
 	args := pgx.NamedArgs{
-		"id": user.Id,
+		"id": user.ID,
 	}
 	rows, err := pgs.connection.QueryContext(ctx, ordersAllQuery, args)
 	if err != nil {
@@ -205,7 +205,7 @@ func (pgs *PostgreSQLStorage) Balance(user *model.User) (*model.Balance, error) 
 		}
 	}()
 	args := pgx.NamedArgs{
-		"id": user.Id,
+		"id": user.ID,
 	}
 
 	var balance sql.NullInt64
@@ -244,15 +244,15 @@ func (pgs *PostgreSQLStorage) Withdraw(request *model.Withdraw) (bool, error) {
 		}
 	}()
 	args := pgx.NamedArgs{
-		"id":  request.UserId,
+		"id":  request.UserID,
 		"num": request.Num,
 		"exp": request.Expence,
 	}
 	var result sql.NullBool
 	errg := tx.QueryRowContext(ctx, withdrawQuery, args).Scan(&result)
 	if errg != nil {
-		pgs.log.Printf("StorageError: failed to withdraw [%v] points for user id [%v], query '%s' error: %v", request.Expence, request.UserId, withdrawQuery, err)
-		return false, fmt.Errorf("StorageError: failed to withdraw [%v] points for user id [%v], query '%s' error: %v", request.Expence, request.UserId, withdrawQuery, err)
+		pgs.log.Printf("StorageError: failed to withdraw [%v] points for user id [%v], query '%s' error: %v", request.Expence, request.UserID, withdrawQuery, err)
+		return false, fmt.Errorf("StorageError: failed to withdraw [%v] points for user id [%v], query '%s' error: %v", request.Expence, request.UserID, withdrawQuery, err)
 	}
 
 	// шаг 4 — сохраняем изменения
@@ -267,7 +267,7 @@ func (pgs *PostgreSQLStorage) Withdrawals(user *model.User) (*[]model.Withdraw, 
 	ctx, cancel := context.WithTimeout(pgs.context, time.Second*5)
 	defer cancel()
 	args := pgx.NamedArgs{
-		"id": user.Id,
+		"id": user.ID,
 	}
 	rows, err := pgs.connection.QueryContext(ctx, withdrawalsAllQuery, args)
 	if err != nil {

@@ -29,8 +29,9 @@ func main() {
 	defer cancel()
 	err = m.RunMigrations(lg, cfg)
 	if err != nil {
-		lg.Fatal().Err(err).Msgf("Migrations retuned error")
-		return
+		//lg.Fatal().Err(err).Msgf("Migrations retuned error")
+		panic("amigrations failed")
+		//return
 	}
 	repo, err := dbstorage.NewStorage(ctx, lg, cfg)
 	if err != nil {

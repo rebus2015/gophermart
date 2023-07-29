@@ -104,7 +104,18 @@ func (ac *AccrualClient) updateSendMultiple() error {
 }
 
 func (ac *AccrualClient) sendreq(ctx context.Context, args agent.Args) error {
-	r, err := ac.request(*args.Order)
+	queryurl := url.URL{
+		Scheme: "http",
+		Host:   ac.cfg.GetAccruralAddr(),
+		Path:   "api/orders/" + strconv.FormatInt(*args.Order.Num, 10),
+	}
+
+	r, err := http.NewRequestWithContext(ac.ctx, http.MethodGet, queryurl.String(), nil)
+	if err != nil {
+		ac.lg.Err(err).Msgf("Create Request failed! with error: %v\n", err)
+		return err
+	}
+
 	response, err := ac.client.Do(r)
 	if err != nil {
 		ac.lg.Printf("Send request error: %v", err)
@@ -134,19 +145,4 @@ func (ac *AccrualClient) sendreq(ctx context.Context, args agent.Args) error {
 		ac.lg.Err(err).Msgf("Failed to update order info [%v]", order)
 	}
 	return nil
-}
-
-func (ac *AccrualClient) request(order model.Order) (*http.Request, error) {
-	queryurl := url.URL{
-		Scheme: "http",
-		Host:   ac.cfg.GetAccruralAddr(),
-		Path:   "api/orders/" + strconv.FormatInt(*order.Num, 10),
-	}
-
-	req, err := http.NewRequestWithContext(ac.ctx, http.MethodGet, queryurl.String(), nil)
-	if err != nil {
-		ac.lg.Err(err).Msgf("Create Request failed! with error: %v\n", err)
-		return nil, err
-	}
-	return req, nil
 }

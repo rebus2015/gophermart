@@ -1,7 +1,7 @@
 package memstorage
 
 import (
-	"context"	
+	"context"
 	"fmt"
 	"sync"
 
@@ -68,30 +68,30 @@ func (m *MemStorage) Add(order *model.Order) {
 	m.lg.Debug().Msgf("MemStorage adder order number %v", order.Num)
 }
 
-func (m *MemStorage) Update(order *model.Order) error{
+func (m *MemStorage) Update(order *model.Order) error {
 	m.orders.mux.Lock()
 	defer m.orders.mux.Unlock()
 	if _, ok := m.orders.values[*order.Num]; !ok {
 		m.lg.Error().Msgf("Order number [%v] not found on memStorare", order.Num)
-		return fmt.Errorf("Order number [%v] not found on memStorare", order.Num)
+		return fmt.Errorf("order number [%v] not found on memStorare", order.Num)
 	}
 
 	err := m.db.AccruralUpdate(order)
 	if err != nil {
 		m.lg.Err(err).Msgf("[Memstorage.Update] Error. Failed to update accrual for order [%v]: %v", order.Num, err)
-		return fmt.Errorf("[Memstorage.Update] Error. Failed to update accrual for order [%v]: %v", order.Num, err)
+		return fmt.Errorf("memstorageError, Failed to update accrual for order [%v]: %v", order.Num, err)
 	}
 	delete(m.orders.values, *order.Num)
 	m.lg.Debug().Msgf("[MemStorage] order number %v UPDATED", order.Num)
 	return nil
 }
 
-func (m *MemStorage) List() []*model.Order{
+func (m *MemStorage) List() []*model.Order {
 	m.orders.mux.RLock()
 	defer m.orders.mux.RUnlock()
 	oslice := make([]*model.Order, 0, len(m.orders.values))
-    for _, tx := range m.orders.values {
-        oslice = append(oslice, &tx)
-    }
+	for _, tx := range m.orders.values {
+		oslice = append(oslice, &tx)
+	}
 	return oslice
 }

@@ -320,7 +320,7 @@ func (pgs *PostgreSQLStorage) AccruralUpdate(order *model.Order) error {
 	_, errg := tx.ExecContext(ctx, accUpdate, args)
 	if errg != nil {
 		pgs.log.Printf("Error AccruralUpdate order num:[%v] query '%s' error: %v", order.Num, accUpdate, err)
-		return fmt.Errorf("Error AccruralUpdate order num:[%v] query '%s' error: %v", order.Num, accUpdate, err)
+		return fmt.Errorf("error AccruralUpdate order num:[%v] query '%s' error: %v", order.Num, accUpdate, err)
 	}
 
 	// шаг 4 — сохраняем изменения

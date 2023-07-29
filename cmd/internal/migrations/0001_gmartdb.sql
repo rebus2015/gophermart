@@ -12,8 +12,8 @@ create table if not exists  users
             unique
 );
 
-alter table users
-    owner to pguser;
+-- alter table users
+--     owner to pguser;
 
 create unique index users_id_idx
     on users (id);
@@ -35,8 +35,8 @@ create table if not exists  orders
         primary key (user_id, num)
 );
 
-alter table orders
-    owner to pguser;
+-- alter table orders
+--     owner to pguser;
 
 create table if not exists  withdraws
 (
@@ -51,8 +51,8 @@ create table if not exists  withdraws
         primary key (user_id, num)
 );
 
-alter table withdraws
-    owner to pguser;
+-- alter table withdraws
+--     owner to pguser;
 
 CREATE OR REPLACE VIEW user_balance(id, accs, exps) as
 SELECT u.id,
@@ -76,8 +76,8 @@ SELECT u.id,
            END AS exps
 FROM users u;
 
-alter table user_balance
-    owner to pguser;
+-- alter table user_balance
+--     owner to pguser;
 
 create or replace function user_add(_login character varying, _hash bytea) returns character varying
     language sql
@@ -118,7 +118,7 @@ where user_id  = _user_id
 order by date_ins asc;
 $$;
 
-alter function orders_all(uuid) owner to pguser;
+-- alter function orders_all(uuid) owner to pguser;
 
 create or replace function withdraw(_user_id uuid, _number bigint, _expence bigint) returns boolean
     language plpgsql
@@ -142,7 +142,7 @@ end if;
 end;
 $$;
 
-alter function withdraw(uuid, bigint, bigint) owner to pguser;
+-- alter function withdraw(uuid, bigint, bigint) owner to pguser;
 
 
 create or replace function withdrawals_all(_user_id uuid)
@@ -155,7 +155,7 @@ $$
  order by date_ins asc
 $$;
 
-alter function withdrawals_all(uuid) owner to pguser;
+-- alter function withdrawals_all(uuid) owner to pguser;
 
 create or replace function order_add(_user_id uuid, _number bigint, _status character varying, _accural bigint) returns SETOF text
     language plpgsql
@@ -182,7 +182,7 @@ end;
 
 $$;
 
-alter function order_add(uuid, bigint, varchar, bigint) owner to pguser;
+-- alter function order_add(uuid, bigint, varchar, bigint) owner to pguser;
 
 create or replace function balance(_user_id uuid)
     returns TABLE(balance bigint, expence bigint)
@@ -194,7 +194,7 @@ FROM user_balance b
 where b.id  = _user_id
 $$;
 
-alter function balance(uuid) owner to pguser;
+-- alter function balance(uuid) owner to pguser;
 
 create or replace function order_update(_num bigint, _status character varying, _accrual bigint) returns void
     language sql
@@ -206,7 +206,7 @@ update orders set
     WHERE num = _num
 $$;
 
-alter function order_update(bigint, varchar, bigint) owner to pguser;
+-- alter function order_update(bigint, varchar, bigint) owner to pguser;
 
 create function orders_acc()
     returns TABLE(num bigint, status character varying)
@@ -218,5 +218,5 @@ FROM orders
 where status not in ('PROCESSED','INVALID')
 $$;
 
-alter function orders_all(uuid) owner to pguser;
+-- alter function orders_all(uuid) owner to pguser;
 -- +goose StatementEnd

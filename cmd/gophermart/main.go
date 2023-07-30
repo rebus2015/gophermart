@@ -30,18 +30,21 @@ func main() {
 	err = m.RunMigrations(lg, cfg)
 	if err != nil {
 		//lg.Fatal().Err(err).Msgf("Migrations retuned error")
-		panic("amigrations failed")
 		//return
+		log.Panicf("Migrations retuned error: %v", err)
+		return
 	}
 	repo, err := dbstorage.NewStorage(ctx, lg, cfg)
 	if err != nil {
-		lg.Fatal().Err(err).Msgf("Error creating dbStorage, with conn: %s", cfg.ConnectionString)
+		//lg.Fatal().Err(err).Msgf("Error creating dbStorage, with conn: %s", cfg.ConnectionString)
+		log.Panicf("Error creating dbStorage, with conn: %s", cfg.ConnectionString)
 		return
 	}
 	orders := memstorage.NewStorage(ctx, repo, cfg, lg)
 	err = orders.Restore()
 	if err != nil {
-		lg.Fatal().Err(err).Msgf("MemStorage Restore failed")
+		log.Panicf("MemStorage Restore failed: %v", err)
+		//lg.Fatal().Err(err).Msgf("MemStorage Restore failed")
 		return
 	}
 
@@ -63,6 +66,7 @@ func main() {
 
 	err = srv.ListenAndServe()
 	if err != nil {
-		lg.Fatal().Err(err).Msg("server exited with error")
+		//lg.Fatal().Err(err).Msg("server exited with error")
+		log.Panicf("MemStorage Restore failed: %v", err)
 	}
 }

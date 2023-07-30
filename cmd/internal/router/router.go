@@ -32,7 +32,7 @@ func NewRouter(m apiMiddleware, h apiHandlers) chi.Router {
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
+	//r.Use(middleware.Recoverer)
 
 	r.Route("/api/user/", func(r chi.Router) {
 		r.With(m.UserJSONMiddleware).

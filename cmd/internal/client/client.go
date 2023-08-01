@@ -105,9 +105,9 @@ func (ac *AccrualClient) updateSendMultiple() error {
 
 func (ac *AccrualClient) sendreq(ctx context.Context, args agent.Args) error {
 	queryurl := url.URL{
-		Scheme: "http",
-		Host:   ac.cfg.GetAccruralAddr(),
-		Path:   "api/orders/" + strconv.FormatInt(*args.Order.Num, 10),
+		//Scheme: "http",
+		Host: ac.cfg.GetAccruralAddr(),
+		Path: "api/orders/" + strconv.FormatInt(*args.Order.Num, 10),
 	}
 
 	r, err := http.NewRequestWithContext(ac.ctx, http.MethodGet, queryurl.String(), nil)

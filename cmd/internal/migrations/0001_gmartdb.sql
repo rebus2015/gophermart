@@ -1,6 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 
+
 create table if not exists  users
 (
     id    uuid    not null

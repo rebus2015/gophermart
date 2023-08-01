@@ -37,7 +37,6 @@ func RunMigrations(lg *logger.Logger, config dbConfig) error {
 	if err := goose.Up(db, "."); err != nil {
 		lg.Error().Err(err).Msg("goose failed to Up migrations")
 		return fmt.Errorf("goose failed to Up migrations: %v", err)
-
 	}
 	return nil
 }

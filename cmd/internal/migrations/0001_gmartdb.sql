@@ -1,7 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
 
-
 create table if not exists  users
 (
     id    uuid    not null
@@ -12,9 +11,6 @@ create table if not exists  users
         constraint users_un
             unique
 );
-
--- alter table users
---     owner to pguser;
 
 create unique index users_id_idx
     on users (id);
@@ -36,9 +32,6 @@ create table if not exists  orders
         primary key (user_id, num)
 );
 
--- alter table orders
---     owner to pguser;
-
 create table if not exists  withdraws
 (
     user_id  uuid                    not null
@@ -52,8 +45,6 @@ create table if not exists  withdraws
         primary key (user_id, num)
 );
 
--- alter table withdraws
---     owner to pguser;
 
 CREATE OR REPLACE VIEW user_balance(id, accs, exps) as
 SELECT u.id,
@@ -77,8 +68,6 @@ SELECT u.id,
            END AS exps
 FROM users u;
 
--- alter table user_balance
---     owner to pguser;
 
 create or replace function user_add(_login character varying, _hash bytea) returns character varying
     language sql
@@ -91,8 +80,6 @@ do nothing
 returning cast(id as varchar);
 $$;
 
-alter function user_add(varchar, bytea) owner to pguser;
-
 create or replace function public.user_check(_login character varying, OUT id character varying, OUT hash bytea) returns record
     language sql
 as
@@ -103,8 +90,6 @@ $$
    from users u
    where login =_login
     $$;
-
-alter function public.user_check(varchar, out varchar, out bytea) owner to pguser;
 
 create or replace function orders_all(_user_id uuid)
     returns TABLE(num bigint, status character varying, accural bigint, date_ins timestamp without time zone)
@@ -118,8 +103,6 @@ FROM orders
 where user_id  = _user_id
 order by date_ins asc;
 $$;
-
--- alter function orders_all(uuid) owner to pguser;
 
 create or replace function withdraw(_user_id uuid, _number bigint, _expence bigint) returns boolean
     language plpgsql
@@ -143,9 +126,6 @@ end if;
 end;
 $$;
 
--- alter function withdraw(uuid, bigint, bigint) owner to pguser;
-
-
 create or replace function withdrawals_all(_user_id uuid)
     returns TABLE(num bigint, expence bigint, date_ins timestamp without time zone)
     language sql
@@ -155,8 +135,6 @@ $$
  where user_id = _user_id
  order by date_ins asc
 $$;
-
--- alter function withdrawals_all(uuid) owner to pguser;
 
 create or replace function order_add(_user_id uuid, _number bigint, _status character varying, _accural bigint) returns SETOF text
     language plpgsql
@@ -180,10 +158,7 @@ else
  end;
 end if;
 end;
-
 $$;
-
--- alter function order_add(uuid, bigint, varchar, bigint) owner to pguser;
 
 create or replace function balance(_user_id uuid)
     returns TABLE(balance bigint, expence bigint)
@@ -195,7 +170,7 @@ FROM user_balance b
 where b.id  = _user_id
 $$;
 
--- alter function balance(uuid) owner to pguser;
+
 
 create or replace function order_update(_num bigint, _status character varying, _accrual bigint) returns void
     language sql
@@ -207,8 +182,6 @@ update orders set
     WHERE num = _num
 $$;
 
--- alter function order_update(bigint, varchar, bigint) owner to pguser;
-
 create function orders_acc()
     returns TABLE(num bigint, status character varying)
     language sql
@@ -219,5 +192,4 @@ FROM orders
 where status not in ('PROCESSED','INVALID')
 $$;
 
--- alter function orders_all(uuid) owner to pguser;
 -- +goose StatementEnd

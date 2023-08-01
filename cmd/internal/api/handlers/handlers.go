@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/rebus2015/gophermart/cmd/internal/api/auth"
 	"github.com/rebus2015/gophermart/cmd/internal/api/keys"
 	"github.com/rebus2015/gophermart/cmd/internal/logger"
 	"github.com/rebus2015/gophermart/cmd/internal/model"
@@ -25,7 +26,11 @@ type memstorage interface {
 	Add(order *model.Order)
 }
 
-func NewAPI(_repo repository, _log *logger.Logger, _ms memstorage) *api {
+type config interface {
+	GetSecretKey() string
+}
+
+func NewAPI(_repo repository, _log *logger.Logger, _ms memstorage, cfg config) *api {
 	return &api{repo: _repo, log: _log, ms: _ms}
 }
 
@@ -33,6 +38,7 @@ type api struct {
 	repo repository
 	log  *logger.Logger
 	ms   memstorage
+	cfg  config
 }
 
 func (a *api) UserRegisterHandler(w http.ResponseWriter, r *http.Request) {
@@ -56,7 +62,19 @@ func (a *api) UserRegisterHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusConflict)
 		return
 	}
+	expirationTime := time.Now().Add(5 * time.Minute)
+	tokenString, err := auth.CreateToken(user.Login, a.cfg.GetSecretKey(), expirationTime)
+	if err != nil {
+		a.log.Err(err).Msgf("UserRegisterHandler failed to create JWT toker for login [%s]", user.Login)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 	// иначе 200
+	http.SetCookie(w, &http.Cookie{
+		Name:    "token",
+		Value:   tokenString,
+		Expires: expirationTime,
+	})
 	w.WriteHeader(http.StatusOK)
 	a.log.Info().Msgf("User successfully registered: [%s]", user.Login)
 }

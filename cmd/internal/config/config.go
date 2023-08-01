@@ -14,7 +14,7 @@ type Config struct {
 	ConnectionString string        `env:"DATABASE_URI"`           // строка подключения к БД
 	Debug            bool          `env:"DBUG_MODE"`              // уровень логирования
 	RateLimit        int           `env:"RATE_LIMIT"`             // частота запросов
-
+	SecretKey        string        `env:"KEY"`                    //JWT ключ для формирования подписи
 }
 
 func GetConfig() (*Config, error) {
@@ -28,6 +28,7 @@ func GetConfig() (*Config, error) {
 	flag.BoolVar(&conf.Debug, "l", true,
 		"logger mode")
 	flag.IntVar(&conf.RateLimit, "m", 3, "Rate limit for accrual client")
+	flag.StringVar(&conf.ConnectionString, "л", "", "JWT Key to create signature")
 	flag.Parse()
 
 	err := env.Parse(&conf)
@@ -54,3 +55,7 @@ func (conf *Config) GetSyncInterval() time.Duration {
 func (conf *Config) GetRateLimit() int {
 	return conf.RateLimit
 }
+func (conf *Config) GetSecretKey() string {
+	return conf.SecretKey
+}
+

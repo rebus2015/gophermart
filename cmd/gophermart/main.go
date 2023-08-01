@@ -48,7 +48,7 @@ func main() {
 		return
 	}
 
-	h := handlers.NewAPI(repo, lg, orders)
+	h := handlers.NewAPI(repo, lg, orders, cfg)
 	m := middleware.NewMiddlewares(repo, lg)
 	handle := router.NewRouter(m, h)
 	accrualClient := client.NewClient(ctx, orders, cfg, lg)

@@ -20,6 +20,7 @@ require (
 	github.com/gammazero/workerpool v1.1.3
 	github.com/go-chi/chi v1.5.4
 	github.com/go-chi/chi/v5 v5.0.10
+	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/jackc/pgx/v5 v5.4.2
 	github.com/pressly/goose/v3 v3.13.4
 	github.com/rs/zerolog v1.29.1

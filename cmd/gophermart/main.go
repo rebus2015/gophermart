@@ -15,6 +15,7 @@ import (
 	"github.com/rebus2015/gophermart/cmd/internal/router"
 	"github.com/rebus2015/gophermart/cmd/internal/storage/dbstorage"
 	"github.com/rebus2015/gophermart/cmd/internal/storage/memstorage"
+	"github.com/rebus2015/gophermart/cmd/internal/api/auth"
 )
 
 func main() {
@@ -47,9 +48,9 @@ func main() {
 		//lg.Fatal().Err(err).Msgf("MemStorage Restore failed")
 		return
 	}
-
-	h := handlers.NewAPI(repo, lg, orders, cfg)
-	m := middleware.NewMiddlewares(repo, lg)
+    a:= auth.NewAuth(lg,cfg)
+	h := handlers.NewAPI(repo, lg, orders, a)
+	m := middleware.NewMiddlewares(repo, lg, a)
 	handle := router.NewRouter(m, h)
 	accrualClient := client.NewClient(ctx, orders, cfg, lg)
 	accrualClient.Run()

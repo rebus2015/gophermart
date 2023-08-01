@@ -22,6 +22,7 @@ type apiHandlers interface {
 
 type apiMiddleware interface {
 	BasicAuthMiddleware(next http.Handler) http.Handler
+	AuthMiddleware(next http.Handler) http.Handler
 	UserJSONMiddleware(next http.Handler) http.Handler
 	OrderTexMiddleware(next http.Handler) http.Handler
 	WithdrawJSONMiddleware(next http.Handler) http.Handler
@@ -32,7 +33,7 @@ func NewRouter(m apiMiddleware, h apiHandlers) chi.Router {
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
-	//r.Use(middleware.Recoverer)
+	r.Use(middleware.Recoverer)
 
 	r.Route("/api/user/", func(r chi.Router) {
 		r.With(m.UserJSONMiddleware).
@@ -40,7 +41,7 @@ func NewRouter(m apiMiddleware, h apiHandlers) chi.Router {
 		r.With(m.UserJSONMiddleware).
 			Post("/login", h.UserLoginHandler)
 		r.Route("/", func(r chi.Router) {
-			r.Use(m.BasicAuthMiddleware)
+			r.Use(m.AuthMiddleware)
 			r.With(m.OrderTexMiddleware).
 				Post("/orders", h.UserOrderNewHandler)
 			r.Get("/orders", h.OrdersAllHandler)

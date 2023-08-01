@@ -20,15 +20,14 @@ type Config struct {
 func GetConfig() (*Config, error) {
 	conf := Config{}
 
-	flag.StringVar(&conf.RunAddress, "a", "", "Server address")
+	flag.StringVar(&conf.RunAddress, "a", "localhost:8080", "Server address")
 	flag.DurationVar(&conf.SyncInterval, "i", time.Second*1, "Accrual system data request interval")
-	flag.StringVar(&conf.AccruralAddr, "r", "", "Accrual system address")
-	flag.StringVar(&conf.ConnectionString, "d", "", "Database connection string(PostgreSql)")
+	flag.StringVar(&conf.AccruralAddr, "r", "localhost:8088", "Accrual system address")
+	flag.StringVar(&conf.ConnectionString, "d", "postgresql://postgres:postgres@localhost:5432/gomart?sslmode=disable", "Database connection string(PostgreSql)")
 	// postgresql://pguser:pgpwd@localhost:5432/gophermart?sslmode=disable
-	flag.BoolVar(&conf.Debug, "l", true,
-		"logger mode")
+	flag.BoolVar(&conf.Debug, "l", true, "logger mode")
 	flag.IntVar(&conf.RateLimit, "m", 3, "Rate limit for accrual client")
-	flag.StringVar(&conf.ConnectionString, "л", "", "JWT Key to create signature")
+	flag.StringVar(&conf.SecretKey, "k", "My_super_secret_KEY", "JWT Key to create signature")
 	flag.Parse()
 
 	err := env.Parse(&conf)
@@ -55,7 +54,6 @@ func (conf *Config) GetSyncInterval() time.Duration {
 func (conf *Config) GetRateLimit() int {
 	return conf.RateLimit
 }
-func (conf *Config) GetSecretKey() string {
-	return conf.SecretKey
+func (conf *Config) GetSecretKey() []byte {
+	return []byte(conf.SecretKey)
 }
-

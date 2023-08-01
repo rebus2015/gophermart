@@ -18,16 +18,21 @@ import (
 type middlewares struct {
 	r repository
 	l *logger.Logger
+	a auth
 }
 
 type repository interface {
 	UserLogin(user *model.User) (*model.User, error)
 }
 
+type auth interface {
+	CheckToken(tokenString string) (*model.User, error)
+}
+
 const compressed string = `gzip`
 
-func NewMiddlewares(_r repository, _l *logger.Logger) *middlewares {
-	return &middlewares{r: _r, l: _l}
+func NewMiddlewares(_r repository, _l *logger.Logger , _a auth) *middlewares {
+	return &middlewares{r: _r, l: _l, a: _a}
 }
 
 func (m *middlewares) BasicAuthMiddleware(next http.Handler) http.Handler {
@@ -68,6 +73,36 @@ func (m *middlewares) BasicAuthMiddleware(next http.Handler) http.Handler {
 		m.l.Info().Msgf("user '%s' is NOT authorized", username)
 		w.Header().Set("WWW-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+	})
+}
+
+func (m *middlewares) AuthMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		c, err := r.Cookie("token")
+		if err != nil {
+			if err == http.ErrNoCookie {
+				// If the cookie is not set, return an unauthorized status
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+			// For any other type of error, return a bad request status
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		// Get the JWT string from the cookie
+		tknStr := c.Value
+		user, err := m.a.CheckToken(tknStr)
+		if err != nil {
+			if err == http.ErrAbortHandler {
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+			w.WriteHeader(http.StatusBadRequest)
+		}
+
+		ctx := context.WithValue(r.Context(), keys.UserContextKey{}, user)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 

@@ -109,6 +109,7 @@ func (ac *AccrualClient) sendreq(ctx context.Context, args agent.Args) error {
 		Host: ac.cfg.GetAccruralAddr(),
 		Path: "api/orders/" + strconv.FormatInt(*args.Order.Num, 10),
 	}
+	ac.lg.Debug().Msgf("Create Request \n Host: %s\n, \nPath: %s", queryurl.Host, queryurl.Path)
 
 	r, err := http.NewRequestWithContext(ac.ctx, http.MethodGet, queryurl.String(), nil)
 	if err != nil {

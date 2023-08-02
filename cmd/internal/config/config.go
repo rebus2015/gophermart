@@ -22,7 +22,7 @@ func GetConfig() (*Config, error) {
 
 	flag.StringVar(&conf.RunAddress, "a", "localhost:8080", "Server address")
 	flag.DurationVar(&conf.SyncInterval, "i", time.Second*1, "Accrual system data request interval")
-	flag.StringVar(&conf.AccruralAddr, "r", "localhost:8088", "Accrual system address")
+	flag.StringVar(&conf.AccruralAddr, "r", "http://localhost:8088", "Accrual system address")
 	flag.StringVar(&conf.ConnectionString, "d", "postgresql://postgres:postgres@localhost:5432/gomart?sslmode=disable", "Database connection string(PostgreSql)")
 	// postgresql://pguser:pgpwd@localhost:5432/gophermart?sslmode=disable
 	flag.BoolVar(&conf.Debug, "l", true, "logger mode")

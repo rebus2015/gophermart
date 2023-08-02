@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"strconv"
 	"time"
 
@@ -104,14 +103,9 @@ func (ac *AccrualClient) updateSendMultiple() error {
 }
 
 func (ac *AccrualClient) sendreq(ctx context.Context, args agent.Args) error {
-	queryurl := url.URL{
-		//Scheme: "http",
-		Host: ac.cfg.GetAccruralAddr(),
-		Path: "api/orders/" + strconv.FormatInt(*args.Order.Num, 10),
-	}
-	ac.lg.Debug().Msgf("Create Request \n Host: %s\n, \nPath: %s", queryurl.Host, queryurl.Path)
-
-	r, err := http.NewRequestWithContext(ac.ctx, http.MethodGet, queryurl.String(), nil)
+	queryurl := ac.cfg.GetAccruralAddr() + "api/orders/" + strconv.FormatInt(*args.Order.Num, 10)	
+	ac.lg.Debug().Msgf("Create Request Url: %s", queryurl)
+	r, err := http.NewRequestWithContext(ac.ctx, http.MethodGet, queryurl, nil)
 	if err != nil {
 		ac.lg.Err(err).Msgf("Create Request failed! with error: %v\n", err)
 		return err

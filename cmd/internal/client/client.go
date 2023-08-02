@@ -103,7 +103,7 @@ func (ac *AccrualClient) updateSendMultiple() error {
 }
 
 func (ac *AccrualClient) sendreq(ctx context.Context, args agent.Args) error {
-	queryurl := ac.cfg.GetAccruralAddr() + "api/orders/" + strconv.FormatInt(*args.Order.Num, 10)	
+	queryurl := ac.cfg.GetAccruralAddr() + "/api/orders/" + strconv.FormatInt(*args.Order.Num, 10)
 	ac.lg.Debug().Msgf("Create Request Url: %s", queryurl)
 	r, err := http.NewRequestWithContext(ac.ctx, http.MethodGet, queryurl, nil)
 	if err != nil {

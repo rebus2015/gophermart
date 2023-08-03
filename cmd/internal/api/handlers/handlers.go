@@ -178,6 +178,7 @@ func (a *api) OrdersAllHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "User info not found in context", http.StatusInternalServerError)
 		return
 	}
+	a.log.Info().Msgf("[OrdersAllHandler] Запросим из БД заказы для пользователя: %v", user.ID)
 	ordersList, err := a.repo.OrdersAll(user)
 	if err != nil { //ошибка запроса 500
 		a.log.Err(err).Msgf("OrdersAllHandler failed to get orders for user [%v], database error", user.Login)
@@ -189,6 +190,7 @@ func (a *api) OrdersAllHandler(w http.ResponseWriter, r *http.Request) {
 		a.log.Info().Msgf("No Orders were found for user [%v]", user.Login)
 		return
 	}
+	a.log.Info().Msgf("[OrdersAllHandler] Получено [%v] записей:", len(*ordersList))
 	b, err := json.Marshal(ordersList)
 	if err != nil {
 		a.log.Err(err).Msgf("ERROR Failed to Marshal ORDERS to JSON: [%+v]", ordersList)
@@ -204,7 +206,6 @@ func (a *api) OrdersAllHandler(w http.ResponseWriter, r *http.Request) {
 		a.log.Err(err).Msgf("Error: [OrdersAllHandler] Result Json encode error :%v", err)
 		http.Error(w, "[OrdersAllHandler] Result Json encode error", http.StatusInternalServerError)
 	}
-	a.log.Debug().Msgf("Возвращаем OrdersJSON result :%+v\n", ordersList)
 }
 
 func (a *api) BalanceHandler(w http.ResponseWriter, r *http.Request) {

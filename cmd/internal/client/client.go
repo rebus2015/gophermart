@@ -127,7 +127,6 @@ func (ac *AccrualClient) sendreq(ctx context.Context, args agent.Args) error {
 	switch response.StatusCode {
 	case http.StatusOK:
 		{
-
 			ac.lg.Info().Msgf("[AccrualService] responce status [%v] for order [%v]", response.StatusCode, *args.Order.Num)
 			order := &model.Accrual{}
 			decoder := json.NewDecoder(response.Body)

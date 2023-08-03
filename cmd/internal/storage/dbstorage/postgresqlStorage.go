@@ -297,7 +297,7 @@ func (pgs *PostgreSQLStorage) Withdrawals(user *model.User) (*[]model.Withdraw, 
 	return wdrsList, nil
 }
 
-func (pgs *PostgreSQLStorage) AccruralUpdate(order *model.Accrual) error {
+func (pgs *PostgreSQLStorage) AccruralUpdate(accrual *model.Accrual) error {
 	ctx, cancel := context.WithCancel(pgs.context)
 	defer cancel()
 
@@ -312,15 +312,15 @@ func (pgs *PostgreSQLStorage) AccruralUpdate(order *model.Accrual) error {
 		}
 	}()
 	args := pgx.NamedArgs{
-		"num":    order.Num,
-		"status": order.Status,
-		"acc":    order.Accrural,
+		"num":    accrual.Num,
+		"status": accrual.Status,
+		"acc":    accrual.Accrural,
 	}
 
 	_, errg := tx.ExecContext(ctx, accUpdate, args)
 	if errg != nil {
-		pgs.log.Printf("Error AccruralUpdate order num:[%v] query '%s' error: %v", order.Num, accUpdate, err)
-		return fmt.Errorf("error AccruralUpdate order num:[%v] query '%s' error: %v", order.Num, accUpdate, err)
+		pgs.log.Printf("Error AccruralUpdate order num:[%v] query '%s' error: %v", accrual.Num, accUpdate, err)
+		return fmt.Errorf("error AccruralUpdate order num:[%v] query '%s' error: %v", accrual.Num, accUpdate, err)
 	}
 
 	// шаг 4 — сохраняем изменения

@@ -199,7 +199,7 @@ func (a *api) OrdersAllHandler(w http.ResponseWriter, r *http.Request) {
 		a.log.Err(err).Msgf("Error: [OrdersAllHandler] Result Json encode error :%v", err)
 		http.Error(w, "[OrdersAllHandler] Result Json encode error", http.StatusInternalServerError)
 	}
-	a.log.Debug().Msgf("Возвращаем OrdersJSON result :%v", ordersList)
+	a.log.Debug().Msgf("Возвращаем OrdersJSON result :%+v\n", ordersList)
 }
 
 func (a *api) BalanceHandler(w http.ResponseWriter, r *http.Request) {

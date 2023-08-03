@@ -114,7 +114,7 @@ func (ac *AccrualClient) updateSendMultiple() error {
 func (ac *AccrualClient) sendreq(ctx context.Context, args agent.Args) error {
 	queryurl := ac.cfg.GetAccruralAddr() + "/api/orders/" + strconv.FormatInt(*args.Order.Num, 10)
 	ac.lg.Info().Msgf("Create Request Url: %s", queryurl)
-	ac.lg.Info().Msgf("[Client] Attemp to get Accrual for order:{\"UserID\":\" %v\",\"number\":\"%v\",\"status\":\"%v\" }", args.Order.Num, args.Order.Status, args.Order.UserID)
+	ac.lg.Info().Msgf("[Client] Attemp to get Accrual for order:{\"number\":\"%v\",\"status\":\"%v\" }", args.Order.Num, args.Order.Status)
 	r, err := http.NewRequestWithContext(ac.ctx, http.MethodGet, queryurl, nil)
 	if err != nil {
 		ac.lg.Err(err).Msgf("Create Request failed! with error: %v\n", err)

@@ -109,7 +109,7 @@ create or replace function withdraw(_user_id uuid, _number bigint, _expence nume
 as
 $$
 declare 
-    cur bigint;
+    cur numeric(9,2);
 begin
 cur := (select b.balance from balance(_user_id) as b);
 if (cur > _expence)
@@ -161,7 +161,7 @@ end;
 $$;
 
 create or replace function balance(_user_id uuid)
-    returns TABLE(balance bigint, expence numeric(9,2))
+    returns TABLE(balance numeric(9,2), expence numeric(9,2))
     language sql
 as
 $$

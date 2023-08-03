@@ -26,7 +26,7 @@ create table if not exists  orders
             unique,
     num      bigint              not null,
     status   varchar             not null,
-    accural  double precision    default 0 not null,
+    accural  numeric(9,2)    default 0 not null,
     date_ins timestamp default now(),
     constraint orders_pk
         primary key (user_id, num)
@@ -39,7 +39,7 @@ create table if not exists  withdraws
             references users
             on delete cascade,
     num      bigint                  not null,
-    expence  double precision                  not null,
+    expence  numeric(9,2)                  not null,
     date_ins timestamp default now() not null,
     constraint withdraws_pk
         primary key (user_id, num)
@@ -56,7 +56,7 @@ SELECT u.id,
                                                                           FROM orders o
                                                                           WHERE o.status::text = 'PROCESSED'::text
                                                                             AND o.user_id = u.id)
-           ELSE 0::double precision
+           ELSE 0::numeric(9,2)
            END AS accs,
        CASE
            WHEN (EXISTS (SELECT
@@ -64,7 +64,7 @@ SELECT u.id,
                          WHERE w.user_id = u.id)) THEN (SELECT sum(w.expence) AS sum
                                                         FROM withdraws w
                                                         WHERE w.user_id = u.id)
-           ELSE 0::double precision
+           ELSE 0::numeric(9,2)
            END AS exps
 FROM users u;
 
@@ -92,19 +92,19 @@ $$
     $$;
 
 create or replace function orders_all(_user_id uuid)
-    returns TABLE(num bigint, status character varying, accural double precision, date_ins timestamp without time zone)
+    returns TABLE(num bigint, status character varying, accural numeric(9,2), date_ins timestamp without time zone)
     language sql
 as
 $$
 SELECT  num, status,
-        case when status='PROCESSED' THEN accural ELSE 0::double precision END,
+        case when status='PROCESSED' THEN accural ELSE 0::numeric(9,2) END,
         date_ins
 FROM orders
 where user_id  = _user_id
 order by date_ins asc;
 $$;
 
-create or replace function withdraw(_user_id uuid, _number bigint, _expence double precision) returns boolean
+create or replace function withdraw(_user_id uuid, _number bigint, _expence numeric(9,2)) returns boolean
     language plpgsql
 as
 $$
@@ -127,7 +127,7 @@ end;
 $$;
 
 create or replace function withdrawals_all(_user_id uuid)
-    returns TABLE(num bigint, expence double precision, date_ins timestamp without time zone)
+    returns TABLE(num bigint, expence numeric(9,2), date_ins timestamp without time zone)
     language sql
 as
 $$
@@ -136,7 +136,7 @@ $$
  order by date_ins asc
 $$;
 
-create or replace function order_add(_user_id uuid, _number bigint, _status character varying, _accural double precision) returns SETOF text
+create or replace function order_add(_user_id uuid, _number bigint, _status character varying, _accural numeric(9,2)) returns SETOF text
     language plpgsql
 as
 $$
@@ -161,7 +161,7 @@ end;
 $$;
 
 create or replace function balance(_user_id uuid)
-    returns TABLE(balance bigint, expence double precision)
+    returns TABLE(balance bigint, expence numeric(9,2))
     language sql
 as
 $$

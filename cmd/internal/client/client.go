@@ -15,11 +15,11 @@ import (
 )
 
 type AccrualClient struct {
-	storage     dbStorage
-	cfg    config
-	lg     *logger.Logger
-	ctx    context.Context
-	client *http.Client
+	storage dbStorage
+	cfg     config
+	lg      *logger.Logger
+	ctx     context.Context
+	client  *http.Client
 }
 
 type config interface {
@@ -40,11 +40,11 @@ type dbStorage interface {
 
 func NewClient(c context.Context, s dbStorage, conf config, logger *logger.Logger) *AccrualClient {
 	return &AccrualClient{
-		storage:     s,
-		cfg:    conf,
-		lg:     logger,
-		ctx:    c,
-		client: &http.Client{},
+		storage: s,
+		cfg:     conf,
+		lg:      logger,
+		ctx:     c,
+		client:  &http.Client{},
 	}
 }
 
@@ -71,8 +71,8 @@ func (ac *AccrualClient) sndWorker(errCh chan<- error) {
 }
 
 func (ac *AccrualClient) updateSendMultiple() error {
-	orders,err := ac.storage.OrdersAcc()
-	if err!=nil {
+	orders, err := ac.storage.OrdersAcc()
+	if err != nil {
 		ac.lg.Err(err).Msg("Client failed to Update Orders List")
 		return err
 	}
@@ -113,7 +113,9 @@ func (ac *AccrualClient) updateSendMultiple() error {
 
 func (ac *AccrualClient) sendreq(ctx context.Context, args agent.Args) error {
 	queryurl := ac.cfg.GetAccruralAddr() + "/api/orders/" + strconv.FormatInt(*args.Order.Num, 10)
-	ac.lg.Debug().Msgf("Create Request Url: %s", queryurl)
+	ac.lg.Info().Msgf("Create Request Url: %s", queryurl)
+	source, _ := json.Marshal(args.Order)
+	ac.lg.Info().Msgf("[Client] Attemp to get Accrual for order: %s", string(source))
 	r, err := http.NewRequestWithContext(ac.ctx, http.MethodGet, queryurl, nil)
 	if err != nil {
 		ac.lg.Err(err).Msgf("Create Request failed! with error: %v\n", err)
@@ -128,13 +130,13 @@ func (ac *AccrualClient) sendreq(ctx context.Context, args agent.Args) error {
 	defer response.Body.Close()
 
 	if response.StatusCode != http.StatusOK {
-		ac.lg.Error().Msgf("AccrualService responce error, status [%v] for order [%v]", response.StatusCode, *args.Order.Num)
+		ac.lg.Error().Msgf("[AccrualService] responce error, status [%v] for order [%v]", response.StatusCode, *args.Order.Num)
 		_, err := io.ReadAll(response.Body)
 		if err != nil {
 			ac.lg.Printf("Read response body error: %v", err)
 			return err
 		}
-		return fmt.Errorf("AccrualService responce error, status [%v] for order [%v]", response.StatusCode, *args.Order.Num)
+		return fmt.Errorf("[AccrualService] responce error, status [%v] for order [%v]", response.StatusCode, *args.Order.Num)
 	}
 
 	order := &model.Order{}
@@ -143,7 +145,8 @@ func (ac *AccrualClient) sendreq(ctx context.Context, args agent.Args) error {
 		ac.lg.Printf("Read response body error: %v", err)
 		return err
 	}
-
+	result, _ := json.Marshal(order)
+	ac.lg.Info().Msgf("[Client] updating Accrual for order: %v", string(result))
 	err = ac.storage.AccruralUpdate(order)
 	if err != nil {
 		ac.lg.Err(err).Msgf("Failed to update order info [%v]", order)

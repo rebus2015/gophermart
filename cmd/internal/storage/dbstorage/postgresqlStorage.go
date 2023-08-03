@@ -297,7 +297,7 @@ func (pgs *PostgreSQLStorage) Withdrawals(user *model.User) (*[]model.Withdraw, 
 	return wdrsList, nil
 }
 
-func (pgs *PostgreSQLStorage) AccruralUpdate(order *model.Order) error {
+func (pgs *PostgreSQLStorage) AccruralUpdate(order *model.Accrual) error {
 	ctx, cancel := context.WithCancel(pgs.context)
 	defer cancel()
 

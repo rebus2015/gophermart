@@ -28,13 +28,8 @@ type config interface {
 	GetRateLimit() int
 }
 
-type memStorage interface {
-	Update(order *model.Order) error
-	List() []*model.Order
-}
-
 type dbStorage interface {
-	AccruralUpdate(order *model.Order) error
+	AccruralUpdate(order *model.Accrual) error
 	OrdersAcc() ([]model.Order, error)
 }
 
@@ -129,29 +124,56 @@ func (ac *AccrualClient) sendreq(ctx context.Context, args agent.Args) error {
 		return err
 	}
 	defer response.Body.Close()
+	switch response.StatusCode {
+	case http.StatusOK:
+		{
 
-	if response.StatusCode != http.StatusOK {
-		ac.lg.Error().Msgf("[AccrualService] responce error, status [%v] for order [%v]", response.StatusCode, *args.Order.Num)
-		_, err := io.ReadAll(response.Body)
-		if err != nil {
-			ac.lg.Printf("Read response body error: %v", err)
-			return err
+			ac.lg.Info().Msgf("[AccrualService] responce status [%v] for order [%v]", response.StatusCode, *args.Order.Num)
+			order := &model.Accrual{}
+			decoder := json.NewDecoder(response.Body)
+			if err := decoder.Decode(order); err != nil {
+				ac.lg.Printf("Read response body error: %v", err)
+				return err
+			}
+			result, _ := json.Marshal(order)
+			ac.lg.Info().Msgf("[Client] updating Accrual for order: %v", string(result))
+			err = ac.storage.AccruralUpdate(order)
+			if err != nil {
+				ac.lg.Err(err).Msgf("Failed to update order info [%v]", order)
+			}
 		}
-		return fmt.Errorf("[AccrualService] responce error, status [%v] for order [%v]", response.StatusCode, *args.Order.Num)
+	case http.StatusNoContent:
+		{
+			ac.lg.Info().Msgf("[AccrualService] responce status [%v] for order [%v]", response.StatusCode, *args.Order.Num)
+			_, err := io.ReadAll(response.Body)
+			if err != nil {
+				ac.lg.Printf("Read response body error: %v", err)
+				return err
+			}
+			return fmt.Errorf("[AccrualService] responce error, status [%v] for order [%v]", response.StatusCode, *args.Order.Num)
+		}
+	case http.StatusTooManyRequests:
+		{
+			ac.lg.Error().Msgf("[AccrualService] responce error, status [%v] for order [%v]", response.StatusCode, *args.Order.Num)
+			_, err := io.ReadAll(response.Body)
+			if err != nil {
+				ac.lg.Printf("Read response body error: %v", err)
+				return err
+			}
+			return fmt.Errorf("[AccrualService] responce error, status [%v] for order [%v]", response.StatusCode, *args.Order.Num)
+		}
+	default:
+		{
+			ac.lg.Error().Msgf("[AccrualService] responce error, status [%v] for order [%v]", response.StatusCode, *args.Order.Num)
+			_, err := io.ReadAll(response.Body)
+			if err != nil {
+				ac.lg.Printf("Read response body error: %v", err)
+				return err
+			}
+			return fmt.Errorf("[AccrualService] responce error, status [%v] for order [%v]", response.StatusCode, *args.Order.Num)
+
+		}
 	}
 
-	ac.lg.Info().Msgf("[AccrualService] responce status [%v] for order [%v]", response.StatusCode, *args.Order.Num)
-	order := &model.Order{}
-	decoder := json.NewDecoder(response.Body)
-	if err := decoder.Decode(order); err != nil {
-		ac.lg.Printf("Read response body error: %v", err)
-		return err
-	}
-	result, _ := json.Marshal(order)
-	ac.lg.Info().Msgf("[Client] updating Accrual for order: %v", string(result))
-	err = ac.storage.AccruralUpdate(order)
-	if err != nil {
-		ac.lg.Err(err).Msgf("Failed to update order info [%v]", order)
-	}
 	return nil
 }

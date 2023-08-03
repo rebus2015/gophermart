@@ -21,6 +21,12 @@ type Order struct {
 	Ins      time.Time `json:"uploaded_at,omitempty"` //дата совершения
 }
 
+type Accrual struct {
+	Num      string   `json:"order"`             //номер заказа
+	Status   string   `json:"status"`            //статус заказа
+	Accrural *float64 `json:"accrual,omitempty"` //начислено баллов лояльности
+}
+
 func (o *Order) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
 		UserID   string   `json:"userid,omitempty"`

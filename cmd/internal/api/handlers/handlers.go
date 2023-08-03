@@ -33,14 +33,13 @@ type auth interface {
 	CreateToken(usr *model.User, expirationTime time.Time) (string, error)
 }
 
-func NewAPI(_repo repository, _log *logger.Logger, _ms memstorage, _auth auth) *api {
-	return &api{repo: _repo, log: _log, ms: _ms, auth: _auth}
+func NewAPI(_repo repository, _log *logger.Logger, _auth auth) *api {
+	return &api{repo: _repo, log: _log, auth: _auth}
 }
 
 type api struct {
 	repo repository
 	log  *logger.Logger
-	ms   memstorage
 	auth auth
 }
 
@@ -153,7 +152,6 @@ func (a *api) UserOrderNewHandler(w http.ResponseWriter, r *http.Request) {
 	switch id {
 	case "":
 		{
-			a.ms.Add(&order)
 			w.WriteHeader(http.StatusAccepted)
 			a.log.Info().Msgf("Order number [%v] successfully added", *order.Num)
 			return

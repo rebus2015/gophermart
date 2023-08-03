@@ -331,7 +331,7 @@ func (pgs *PostgreSQLStorage) AccruralUpdate(order *model.Order) error {
 	return nil
 }
 
-func (pgs *PostgreSQLStorage) OrdersAcc() (*[]model.Order, error) {
+func (pgs *PostgreSQLStorage) OrdersAcc() ([]model.Order, error) {
 	ctx, cancel := context.WithTimeout(pgs.context, time.Second*5)
 	defer cancel()
 
@@ -359,5 +359,5 @@ func (pgs *PostgreSQLStorage) OrdersAcc() (*[]model.Order, error) {
 	if err != nil {
 		return nil, err
 	}
-	return ordersList, nil
+	return *ordersList, nil
 }

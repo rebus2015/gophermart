@@ -15,7 +15,7 @@ import (
 )
 
 type AccrualClient struct {
-	ms     memStorage
+	storage     dbStorage
 	cfg    config
 	lg     *logger.Logger
 	ctx    context.Context
@@ -33,9 +33,14 @@ type memStorage interface {
 	List() []*model.Order
 }
 
-func NewClient(c context.Context, m memStorage, conf config, logger *logger.Logger) *AccrualClient {
+type dbStorage interface {
+	AccruralUpdate(order *model.Order) error
+	OrdersAcc() ([]model.Order, error)
+}
+
+func NewClient(c context.Context, s dbStorage, conf config, logger *logger.Logger) *AccrualClient {
 	return &AccrualClient{
-		ms:     m,
+		storage:     s,
 		cfg:    conf,
 		lg:     logger,
 		ctx:    c,
@@ -66,7 +71,11 @@ func (ac *AccrualClient) sndWorker(errCh chan<- error) {
 }
 
 func (ac *AccrualClient) updateSendMultiple() error {
-	orders := ac.ms.List()
+	orders,err := ac.storage.OrdersAcc()
+	if err!=nil {
+		ac.lg.Err(err).Msg("Client failed to Update Orders List")
+		return err
+	}
 	jobs := []agent.Job{}
 	length := len(orders)
 	for i := 0; i < length; i++ {
@@ -74,7 +83,7 @@ func (ac *AccrualClient) updateSendMultiple() error {
 			Descriptor: i,
 			ExecFn:     ac.sendreq,
 			Args: agent.Args{
-				Order: orders[i],
+				Order: &orders[i],
 			},
 		})
 	}
@@ -135,7 +144,7 @@ func (ac *AccrualClient) sendreq(ctx context.Context, args agent.Args) error {
 		return err
 	}
 
-	err = ac.ms.Update(order)
+	err = ac.storage.AccruralUpdate(order)
 	if err != nil {
 		ac.lg.Err(err).Msgf("Failed to update order info [%v]", order)
 	}

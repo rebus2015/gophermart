@@ -177,8 +177,8 @@ func (pgs *PostgreSQLStorage) OrdersAll(user *model.User) (*[]model.Order, error
 		mo.Num = &o.Num.Int64
 		mo.Status = o.Status.String
 		if o.Accrural.Valid {
-			mo.Accrural = &o.Accrural.Int64
-		} 
+			mo.Accrural = &o.Accrural.Float64
+		}
 		mo.Ins = o.Ins.Time
 		*ordersList = append(
 			*ordersList, mo)
@@ -208,8 +208,8 @@ func (pgs *PostgreSQLStorage) Balance(user *model.User) (*model.Balance, error) 
 		"id": user.ID,
 	}
 
-	var balance sql.NullInt64
-	var expence sql.NullInt64
+	var balance sql.NullFloat64
+	var expence sql.NullFloat64
 	row := tx.QueryRowContext(ctx, balanceGetQuery, args)
 	errg := row.Scan(&balance, &expence)
 	if errg != nil {
@@ -223,8 +223,8 @@ func (pgs *PostgreSQLStorage) Balance(user *model.User) (*model.Balance, error) 
 	}
 
 	b := model.Balance{
-		Current: &balance.Int64,
-		Expence: &expence.Int64,
+		Current: &balance.Float64,
+		Expence: &expence.Float64,
 	}
 	return &b, nil
 }
@@ -284,7 +284,7 @@ func (pgs *PostgreSQLStorage) Withdrawals(user *model.User) (*[]model.Withdraw, 
 		}
 		mo := model.Withdraw{}
 		mo.Num = &o.Num.Int64
-		mo.Expence = &o.Expence.Int64
+		mo.Expence = &o.Expence.Float64
 		mo.Ins = o.Ins.Time
 		*wdrsList = append(
 			*wdrsList, mo)

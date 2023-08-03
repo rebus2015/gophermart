@@ -26,7 +26,7 @@ create table if not exists  orders
             unique,
     num      bigint              not null,
     status   varchar             not null,
-    accural  bigint    default 0 not null,
+    accural  numeric    default 0 not null,
     date_ins timestamp default now(),
     constraint orders_pk
         primary key (user_id, num)
@@ -39,7 +39,7 @@ create table if not exists  withdraws
             references users
             on delete cascade,
     num      bigint                  not null,
-    expence  bigint                  not null,
+    expence  numeric                  not null,
     date_ins timestamp default now() not null,
     constraint withdraws_pk
         primary key (user_id, num)
@@ -92,19 +92,19 @@ $$
     $$;
 
 create or replace function orders_all(_user_id uuid)
-    returns TABLE(num bigint, status character varying, accural bigint, date_ins timestamp without time zone)
+    returns TABLE(num bigint, status character varying, accural numeric, date_ins timestamp without time zone)
     language sql
 as
 $$
 SELECT  num, status,
-        case when status='PROCESSED' THEN accural ELSE 0::bigint END,
+        case when status='PROCESSED' THEN accural ELSE 0::numeric END,
         date_ins
 FROM orders
 where user_id  = _user_id
 order by date_ins asc;
 $$;
 
-create or replace function withdraw(_user_id uuid, _number bigint, _expence bigint) returns boolean
+create or replace function withdraw(_user_id uuid, _number bigint, _expence numeric) returns boolean
     language plpgsql
 as
 $$
@@ -127,7 +127,7 @@ end;
 $$;
 
 create or replace function withdrawals_all(_user_id uuid)
-    returns TABLE(num bigint, expence bigint, date_ins timestamp without time zone)
+    returns TABLE(num bigint, expence numeric, date_ins timestamp without time zone)
     language sql
 as
 $$
@@ -136,7 +136,7 @@ $$
  order by date_ins asc
 $$;
 
-create or replace function order_add(_user_id uuid, _number bigint, _status character varying, _accural bigint) returns SETOF text
+create or replace function order_add(_user_id uuid, _number bigint, _status character varying, _accural numeric) returns SETOF text
     language plpgsql
 as
 $$
@@ -161,7 +161,7 @@ end;
 $$;
 
 create or replace function balance(_user_id uuid)
-    returns TABLE(balance bigint, expence bigint)
+    returns TABLE(balance bigint, expence numeric)
     language sql
 as
 $$

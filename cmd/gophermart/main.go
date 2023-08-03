@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/rebus2015/gophermart/cmd/internal/api/auth"
 	"github.com/rebus2015/gophermart/cmd/internal/api/handlers"
 	"github.com/rebus2015/gophermart/cmd/internal/api/middleware"
 	"github.com/rebus2015/gophermart/cmd/internal/client"
@@ -15,7 +16,6 @@ import (
 	"github.com/rebus2015/gophermart/cmd/internal/router"
 	"github.com/rebus2015/gophermart/cmd/internal/storage/dbstorage"
 	"github.com/rebus2015/gophermart/cmd/internal/storage/memstorage"
-	"github.com/rebus2015/gophermart/cmd/internal/api/auth"
 )
 
 func main() {
@@ -48,7 +48,7 @@ func main() {
 		//lg.Fatal().Err(err).Msgf("MemStorage Restore failed")
 		return
 	}
-    a:= auth.NewAuth(lg,cfg)
+	a := auth.NewAuth(lg, cfg)
 	h := handlers.NewAPI(repo, lg, orders, a)
 	m := middleware.NewMiddlewares(repo, lg, a)
 	handle := router.NewRouter(m, h)

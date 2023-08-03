@@ -17,12 +17,12 @@ const (
 type dbOrder struct {
 	Num      sql.NullInt64
 	Status   sql.NullString
-	Accrural sql.NullInt64
+	Accrural sql.NullFloat64
 	Ins      sql.NullTime
 }
 
 type dbWdr struct {
 	Num     sql.NullInt64
-	Expence sql.NullInt64
+	Expence sql.NullFloat64
 	Ins     sql.NullTime
 }

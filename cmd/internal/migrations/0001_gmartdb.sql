@@ -172,7 +172,7 @@ $$;
 
 
 
-create or replace function order_update(_num bigint, _status character varying, _accrual bigint) returns void
+create or replace function order_update(_num bigint, _status character varying, _accrual numeric(9,2)) returns void
     language sql
 as
 $$

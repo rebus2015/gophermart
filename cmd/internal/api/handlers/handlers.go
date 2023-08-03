@@ -171,6 +171,7 @@ func (a *api) UserOrderNewHandler(w http.ResponseWriter, r *http.Request) {
 
 func (a *api) OrdersAllHandler(w http.ResponseWriter, r *http.Request) {
 	user, ok := r.Context().Value(keys.UserContextKey{}).(*model.User)
+	w.Header().Set("Content-Type", "application/json")
 	if !ok {
 		a.log.Error().Msgf(
 			"Error: [OrdersAllHandler] User info not found in context status-'500'",
@@ -198,7 +199,6 @@ func (a *api) OrdersAllHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	a.log.Info().Msgf("GOT ORDERS FOM DB: %s", string(b))
 
-	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	encoder := json.NewEncoder(w)
 	err = encoder.Encode(ordersList)

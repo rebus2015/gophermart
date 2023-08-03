@@ -21,7 +21,6 @@ type apiHandlers interface {
 }
 
 type apiMiddleware interface {
-	BasicAuthMiddleware(next http.Handler) http.Handler
 	AuthMiddleware(next http.Handler) http.Handler
 	UserJSONMiddleware(next http.Handler) http.Handler
 	OrderTexMiddleware(next http.Handler) http.Handler

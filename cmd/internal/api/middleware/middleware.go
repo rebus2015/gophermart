@@ -35,47 +35,6 @@ func NewMiddlewares(_r repository, _l *logger.Logger , _a auth) *middlewares {
 	return &middlewares{r: _r, l: _l, a: _a}
 }
 
-func (m *middlewares) BasicAuthMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		username, password, ok := r.BasicAuth()
-		if !ok {
-			w.Header().Add("WWW-Authenticate", `Basic realm="Give username and password"`)
-			w.WriteHeader(http.StatusBadRequest)
-			_, err := w.Write([]byte(`{"message": "No basic auth present"}`))
-			if err != nil {
-				m.l.Err(err).Msgf("[BasicAuthMiddleware] Responce.Write returned error: %v", err)
-			}
-			return
-		}
-		usr := &model.User{
-			Login:    username,
-			Password: password,
-		}
-		expectedUser, err := m.r.UserLogin(usr)
-		if err != nil {
-			m.l.Error().Err(err).Msgf("failed to get auth params for user:%s", username)
-			w.WriteHeader(http.StatusInternalServerError)
-			_, err := w.Write([]byte(`{"message": "failed to get auth params for user due to database error"}`))
-			if err != nil {
-				m.l.Err(err).Msgf("[BasicAuthMiddleware] Responce.Write returned error: %v", err)
-			}
-			return
-		}
-
-		if utils.CheckPasswordHash(password, string(expectedUser.Hash)) {
-			m.l.Info().Msgf("user '%s' is successfully authorized", username)
-			usr.ID = expectedUser.ID
-			ctx := context.WithValue(r.Context(), keys.UserContextKey{}, usr)
-			next.ServeHTTP(w, r.WithContext(ctx))
-			return
-		}
-
-		m.l.Info().Msgf("user '%s' is NOT authorized", username)
-		w.Header().Set("WWW-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-	})
-}
-
 func (m *middlewares) AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		c, err := r.Cookie("token")

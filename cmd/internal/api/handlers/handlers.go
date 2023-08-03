@@ -110,7 +110,7 @@ func (a *api) UserLoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	expirationTime := time.Now().Add(5 * time.Minute)
-	tokenString, err := a.auth.CreateToken(user, expirationTime)
+	tokenString, err := a.auth.CreateToken(userAcc, expirationTime)
 	if err != nil {
 		a.log.Err(err).Msgf("UserRegisterHandler failed to create JWT toker for login [%s]", user.Login)
 		w.WriteHeader(http.StatusInternalServerError)

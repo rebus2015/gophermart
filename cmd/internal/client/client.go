@@ -44,7 +44,9 @@ func NewClient(c context.Context, s dbStorage, conf config, logger *logger.Logge
 		cfg:     conf,
 		lg:      logger,
 		ctx:     c,
-		client:  &http.Client{},
+		client: &http.Client{
+			Transport: &http.Transport{IdleConnTimeout: 5 * time.Second},
+		},
 	}
 }
 
@@ -114,7 +116,7 @@ func (ac *AccrualClient) updateSendMultiple() error {
 func (ac *AccrualClient) sendreq(ctx context.Context, args agent.Args) error {
 	queryurl := ac.cfg.GetAccruralAddr() + "/api/orders/" + strconv.FormatInt(*args.Order.Num, 10)
 	ac.lg.Info().Msgf("Create Request Url: %s", queryurl)
-	ac.lg.Info().Msgf("[Client] Attemp to get Accrual for order:{\"number\":\"%v\",\"status\":\"%v\" }", args.Order.Num, args.Order.Status)
+
 	r, err := http.NewRequestWithContext(ac.ctx, http.MethodGet, queryurl, nil)
 	if err != nil {
 		ac.lg.Err(err).Msgf("Create Request failed! with error: %v\n", err)
@@ -123,7 +125,7 @@ func (ac *AccrualClient) sendreq(ctx context.Context, args agent.Args) error {
 
 	response, err := ac.client.Do(r)
 	if err != nil {
-		ac.lg.Printf("Send request error: %v", err)
+		ac.lg.Err(err).Msgf("Send request error: %v", err)
 		return err
 	}
 	defer response.Body.Close()
@@ -138,6 +140,7 @@ func (ac *AccrualClient) sendreq(ctx context.Context, args agent.Args) error {
 		return fmt.Errorf("[AccrualService] responce error, status [%v] for order [%v]", response.StatusCode, *args.Order.Num)
 	}
 
+	ac.lg.Info().Msgf("[AccrualService] responce status [%v] for order [%v]", response.StatusCode, *args.Order.Num)
 	order := &model.Order{}
 	decoder := json.NewDecoder(response.Body)
 	if err := decoder.Decode(order); err != nil {

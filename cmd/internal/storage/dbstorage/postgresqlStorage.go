@@ -155,7 +155,7 @@ func (pgs *PostgreSQLStorage) OrdersNew(order *model.Order) (string, error) {
 }
 
 func (pgs *PostgreSQLStorage) OrdersAll(user *model.User) (*[]model.Order, error) {
-	ctx, cancel := context.WithTimeout(pgs.context, time.Second*5)
+	ctx, cancel := context.WithTimeout(pgs.context, time.Second*15)
 	defer cancel()
 	args := pgx.NamedArgs{
 		"id": user.ID,
@@ -188,6 +188,7 @@ func (pgs *PostgreSQLStorage) OrdersAll(user *model.User) (*[]model.Order, error
 	if err != nil {
 		return nil, err
 	}
+	pgs.log.Info().Msgf("GOT ORDERS FOM DB: %+v", ordersList)
 	return ordersList, nil
 }
 

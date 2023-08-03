@@ -187,8 +187,7 @@ func (pgs *PostgreSQLStorage) OrdersAll(user *model.User) (*[]model.Order, error
 	err = rows.Err()
 	if err != nil {
 		return nil, err
-	}
-	pgs.log.Info().Msgf("GOT ORDERS FOM DB: %+v", ordersList)
+	}	
 	return ordersList, nil
 }
 

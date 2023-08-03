@@ -189,6 +189,13 @@ func (a *api) OrdersAllHandler(w http.ResponseWriter, r *http.Request) {
 		a.log.Info().Msgf("No Orders were found for user [%v]", user.Login)
 		return
 	}
+	b, err := json.Marshal(ordersList)
+	if err != nil {
+		a.log.Err(err).Msgf("ERROR Failed to Marshal ORDERS to JSON: [%+v]", ordersList)
+		return
+	}
+	a.log.Info().Msgf("GOT ORDERS FOM DB: %+v", b)
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	encoder := json.NewEncoder(w)

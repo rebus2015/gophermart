@@ -97,7 +97,7 @@ create or replace function orders_all(_user_id uuid)
 as
 $$
 SELECT  num, status,
-        case when status='PROCESSED' THEN accural ELSE NULL END,
+        case when status='PROCESSED' THEN accural ELSE 0::bigint END,
         date_ins
 FROM orders
 where user_id  = _user_id

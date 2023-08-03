@@ -178,7 +178,7 @@ func (pgs *PostgreSQLStorage) OrdersAll(user *model.User) (*[]model.Order, error
 		mo.Status = o.Status.String
 		if o.Accrural.Valid {
 			mo.Accrural = &o.Accrural.Int64
-		}
+		} 
 		mo.Ins = o.Ins.Time
 		*ordersList = append(
 			*ordersList, mo)

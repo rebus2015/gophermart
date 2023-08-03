@@ -65,12 +65,16 @@ func (m *MemStorage) Add(order *model.Order) {
 	m.orders.mux.Lock()
 	defer m.orders.mux.Unlock()
 	m.orders.values[*order.Num] = *order
-	m.lg.Debug().Msgf("MemStorage adder order number %v", order.Num)
+	m.lg.Debug().Msgf("MemStorage adder order number %d", order.Num)
 }
 
 func (m *MemStorage) Update(order *model.Order) error {
 	m.orders.mux.Lock()
 	defer m.orders.mux.Unlock()
+	if len(m.orders.values) == 0 {
+		m.lg.Error().Msgf("Failed update memStorare with order [%d], but it was EMPTY", order.Num)
+		return fmt.Errorf("Failed to update memStorare with order [%d], but it was EMPTY", order.Num)
+	}
 	if _, ok := m.orders.values[*order.Num]; !ok {
 		m.lg.Error().Msgf("Order number [%v] not found on memStorare", order.Num)
 		return fmt.Errorf("order number [%v] not found on memStorare", order.Num)

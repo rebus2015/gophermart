@@ -38,16 +38,16 @@ type dbStorage interface {
 }
 
 func NewClient(c context.Context, s dbStorage, conf config, logger *logger.Logger) *AccrualClient {
+	cl := retryablehttp.NewClient()
+	cl.RetryMax = 3
+	cl.RetryWaitMax = time.Duration(5 * time.Second)
 	return &AccrualClient{
 		storage: s,
 		cfg:     conf,
 		lg:      logger,
 		ctx:     c,
-		cool: make(chan int64, conf.GetRateLimit()),
-		client: &retryablehttp.Client{ 
-			RetryMax: 3,
-			RetryWaitMin: 1,	
-		},
+		cool:    make(chan int64, conf.GetRateLimit()),
+		client:  cl,
 	}
 }
 
@@ -57,8 +57,8 @@ func (ac *AccrualClient) Run() {
 }
 
 func (ac *AccrualClient) coolDown(wait int64) {
-	go func(){
-		ac.cool<-wait
+	go func() {
+		ac.cool <- wait
 	}()
 }
 
@@ -116,7 +116,7 @@ func (ac *AccrualClient) updateSendMultiple() error {
 			{
 				wp.Stop()
 				ac.ticker.Stop()
-				time.Sleep(time.Duration(wait)*time.Second)
+				time.Sleep(time.Duration(wait) * time.Second)
 				ac.ticker.Reset(ac.cfg.GetSyncInterval())
 			}
 		case <-wp.Done:
@@ -130,7 +130,7 @@ func (ac *AccrualClient) sendreq(ctx context.Context, args agent.Args) error {
 	queryurl := ac.cfg.GetAccruralAddr() + "/api/orders/" + strconv.FormatInt(*args.Order.Num, 10)
 	ac.lg.Info().Msgf("Create Request Url: %s", queryurl)
 
-	r, err := retryablehttp.NewRequestWithContext(ac.ctx, http.MethodGet, queryurl,nil)
+	r, err := retryablehttp.NewRequestWithContext(ac.ctx, http.MethodGet, queryurl, nil)
 	if err != nil {
 		ac.lg.Err(err).Msgf("Create Request failed! with error: %v\n", err)
 		return err
@@ -174,7 +174,7 @@ func (ac *AccrualClient) sendreq(ctx context.Context, args agent.Args) error {
 			ac.lg.Error().Msgf("[AccrualService] responce error, status [%v] for order [%v]", response.StatusCode, *args.Order.Num)
 			waitString := response.Header.Get("Retry-After")
 			ac.lg.Info().Msgf("[AccrualService] responce status [%v] Retry-After [%s]", response.StatusCode, waitString)
-			w,err :=strconv.ParseInt(waitString,10,32) 
+			w, err := strconv.ParseInt(waitString, 10, 32)
 			if err != nil {
 				ac.lg.Printf("Failed to process wait interval for COOLDOWN: %v", err)
 				return err

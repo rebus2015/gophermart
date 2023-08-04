@@ -41,7 +41,7 @@ func NewClient(c context.Context, s dbStorage, conf config, logger *logger.Logge
 		cfg:     conf,
 		lg:      logger,
 		ctx:     c,
-		cool: make(chan int64),
+		cool: make(chan int64, conf.GetRateLimit()),
 		client: &http.Client{
 			Transport: &http.Transport{IdleConnTimeout: 5 * time.Second},
 		},

@@ -52,10 +52,9 @@ func New(wcount int, lg *logger.Logger) *WorkerPool {
 }
 
 func (wp *WorkerPool) Run(ctx context.Context) {
-	workersCtx := context.Background()
 	for i := 0; i < wp.workersCount; i++ {
 		wp.wg.Add(1)
-		go worker(workersCtx, &wp.wg, wp.jobs, wp.errCh, wp.Cancel, wp.log)
+		go worker(wp.workersCtx, &wp.wg, wp.jobs, wp.errCh, wp.Cancel, wp.log)
 	}
 	wp.wg.Wait()
 	close(wp.Done)

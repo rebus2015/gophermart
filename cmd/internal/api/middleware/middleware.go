@@ -268,7 +268,7 @@ func (m *middlewares) OrderTexMiddleware(next http.Handler) http.Handler {
 			return
 		}
 		if !utils.Valid(orderNum) {
-			w.WriteHeader(http.StatusConflict)
+			w.WriteHeader(http.StatusUnprocessableEntity)
 			_, err := w.Write([]byte(fmt.Sprintf("Error order format mismatch on Luhn check: %v", string(number))))
 			if err != nil {
 				m.l.Err(err).Msgf("[OrderTexMiddleware] Responce.Write returned error: %v", err)

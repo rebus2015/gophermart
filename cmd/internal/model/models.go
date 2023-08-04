@@ -64,6 +64,28 @@ func (w *Withdraw) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (w *Withdraw) UnmarshalJSON(data []byte) error {
+	type Alias Withdraw
+	aux := &struct {
+		NumStr string `json:"order"`
+		*Alias
+	}{
+		Alias: (*Alias)(w),
+	}
+
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+
+	num, err := strconv.ParseInt(aux.NumStr, 10, 64)
+	if err != nil {
+		return err
+	}
+
+	w.Num = &num
+	return nil
+}
+
 type Balance struct {
 	Current *float64 `json:"current"`   //текущий баланс
 	Expence *float64 `json:"withdrawn"` //использовано баллов за весь период

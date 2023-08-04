@@ -41,12 +41,12 @@ func NewRouter(m apiMiddleware, h apiHandlers) chi.Router {
 			Post("/login", h.UserLoginHandler)
 		r.Route("/", func(r chi.Router) {
 			r.Use(m.AuthMiddleware)
+			r.Get("/withdrawals", h.WithdrawalsAllHandler)
 			r.With(m.OrderTexMiddleware).
 				Post("/orders", h.UserOrderNewHandler)
 			r.Get("/orders", h.OrdersAllHandler)
 			r.Route("/balance", func(r chi.Router) {
-				r.Get("/", h.BalanceHandler)
-				r.Get("/withdrawals", h.WithdrawalsAllHandler)
+				r.Get("/", h.BalanceHandler)				
 				r.With(m.WithdrawJSONMiddleware).
 					Post("/withdraw", h.WithdrawHandler)
 			})

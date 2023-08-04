@@ -35,8 +35,7 @@ type WorkerPool struct {
 	jobs         chan Job
 	errCh        chan Result
 	Done         chan struct{}
-	Cancel       chan bool	
-	workersCtx   context.Context
+	Cancel       chan bool		
 }
 
 func New(wcount int, lg *logger.Logger) *WorkerPool {

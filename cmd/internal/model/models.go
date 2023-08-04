@@ -2,6 +2,7 @@ package model
 
 import (
 	"encoding/json"
+	"strconv"
 	"time"
 )
 
@@ -16,20 +17,26 @@ type Order struct {
 	UserID   string    `json:"userid,omitempty"`      //uuid пользователя
 	Num      *int64    `json:"number"`                //номер заказа
 	Status   string    `json:"status"`                //статус заказа
-	Accrural *int64    `json:"accrual,omitempty"`     //начислено баллов лояльности
+	Accrural *float64  `json:"accrual,omitempty"`     //начислено баллов лояльности
 	Ins      time.Time `json:"uploaded_at,omitempty"` //дата совершения
+}
+
+type Accrual struct {
+	Num      string   `json:"order"`             //номер заказа
+	Status   string   `json:"status"`            //статус заказа
+	Accrural *float64 `json:"accrual,omitempty"` //начислено баллов лояльности
 }
 
 func (o *Order) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
-		UserID   string `json:"userid,omitempty"`
-		Num      *int64 `json:"number"`
-		Status   string `json:"status"`
-		Accrural *int64 `json:"accrual,omitempty"`
-		Ins      string `json:"uploaded_at,omitempty"`
+		UserID   string   `json:"userid,omitempty"`
+		Num      string   `json:"number"`
+		Status   string   `json:"status"`
+		Accrural *float64 `json:"accrual,omitempty"`
+		Ins      string   `json:"uploaded_at,omitempty"`
 	}{
 		UserID:   o.UserID,
-		Num:      o.Num,
+		Num:      strconv.FormatInt(*o.Num, 10),
 		Status:   o.Status,
 		Accrural: o.Accrural,
 		Ins:      o.Ins.Format(time.RFC3339),
@@ -39,25 +46,44 @@ func (o *Order) MarshalJSON() ([]byte, error) {
 type Withdraw struct {
 	UserID  string    `json:"userid,omitempty"`       //uuid пользователя
 	Num     *int64    `json:"order"`                  //номер заказа
-	Expence *int64    `json:"sum"`                    //сумма списания баллов
+	Expence *float64  `json:"sum"`                    //сумма списания баллов
 	Ins     time.Time `json:"processed_at,omitempty"` //дата совершения
 }
 
 func (w *Withdraw) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
-		UserID  string `json:"userid,omitempty"`
-		Num     *int64 `json:"order"`
-		Expence *int64 `json:"sum"`
-		Ins     string `json:"processed_at,omitempty"`
+		UserID  string   `json:"userid,omitempty"`
+		Num     string   `json:"order"`
+		Expence *float64 `json:"sum"`
+		Ins     string   `json:"processed_at,omitempty"`
 	}{
 		UserID:  w.UserID,
-		Num:     w.Num,
+		Num:     strconv.FormatInt(*w.Num, 10),
 		Expence: w.Expence,
 		Ins:     w.Ins.Format(time.RFC3339),
 	})
 }
 
+func (w *Withdraw) UnmarshalJSON(data []byte) error {
+	type Alias Withdraw
+	aux := &struct {
+		NumStr string `json:"order"`
+		*Alias
+	}{
+		Alias: (*Alias)(w),
+	}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	num, err := strconv.ParseInt(aux.NumStr, 10, 64)
+	if err != nil {
+		return err
+	}
+	w.Num = &num
+	return nil
+}
+
 type Balance struct {
-	Current *int64 `json:"current"`   //текущий баланс
-	Expence *int64 `json:"withdrawn"` //использовано баллов за весь период
+	Current *float64 `json:"current"`   //текущий баланс
+	Expence *float64 `json:"withdrawn"` //использовано баллов за весь период
 }

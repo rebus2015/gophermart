@@ -18,9 +18,9 @@ type Logger struct {
 	logger *zerolog.Logger
 }
 
-func New(Mode RunMode) *Logger {
+func New(mode RunMode) *Logger {
 	logLevel := zerolog.InfoLevel
-	if Mode.IsDebug() {
+	if mode.IsDebug() {
 		logLevel = zerolog.TraceLevel
 	}
 
@@ -30,9 +30,9 @@ func New(Mode RunMode) *Logger {
 	return &Logger{logger: &logger}
 }
 
-func NewConsole(Mode RunMode) *Logger {
+func NewConsole(mode RunMode) *Logger {
 	logLevel := zerolog.InfoLevel
-	if Mode.IsDebug() {
+	if mode.IsDebug() {
 		logLevel = zerolog.TraceLevel
 	}
 

@@ -155,7 +155,7 @@ func (pgs *PostgreSQLStorage) OrdersNew(order *model.Order) (string, error) {
 }
 
 func (pgs *PostgreSQLStorage) OrdersAll(user *model.User) (*[]model.Order, error) {
-	ctx, cancel := context.WithTimeout(pgs.context, time.Second*5)
+	ctx, cancel := context.WithTimeout(pgs.context, time.Second*15)
 	defer cancel()
 	args := pgx.NamedArgs{
 		"id": user.ID,
@@ -177,7 +177,7 @@ func (pgs *PostgreSQLStorage) OrdersAll(user *model.User) (*[]model.Order, error
 		mo.Num = &o.Num.Int64
 		mo.Status = o.Status.String
 		if o.Accrural.Valid {
-			mo.Accrural = &o.Accrural.Int64
+			mo.Accrural = &o.Accrural.Float64
 		}
 		mo.Ins = o.Ins.Time
 		*ordersList = append(
@@ -187,7 +187,7 @@ func (pgs *PostgreSQLStorage) OrdersAll(user *model.User) (*[]model.Order, error
 	err = rows.Err()
 	if err != nil {
 		return nil, err
-	}
+	}	
 	return ordersList, nil
 }
 
@@ -208,8 +208,8 @@ func (pgs *PostgreSQLStorage) Balance(user *model.User) (*model.Balance, error) 
 		"id": user.ID,
 	}
 
-	var balance sql.NullInt64
-	var expence sql.NullInt64
+	var balance sql.NullFloat64
+	var expence sql.NullFloat64
 	row := tx.QueryRowContext(ctx, balanceGetQuery, args)
 	errg := row.Scan(&balance, &expence)
 	if errg != nil {
@@ -223,8 +223,8 @@ func (pgs *PostgreSQLStorage) Balance(user *model.User) (*model.Balance, error) 
 	}
 
 	b := model.Balance{
-		Current: &balance.Int64,
-		Expence: &expence.Int64,
+		Current: &balance.Float64,
+		Expence: &expence.Float64,
 	}
 	return &b, nil
 }
@@ -284,7 +284,7 @@ func (pgs *PostgreSQLStorage) Withdrawals(user *model.User) (*[]model.Withdraw, 
 		}
 		mo := model.Withdraw{}
 		mo.Num = &o.Num.Int64
-		mo.Expence = &o.Expence.Int64
+		mo.Expence = &o.Expence.Float64
 		mo.Ins = o.Ins.Time
 		*wdrsList = append(
 			*wdrsList, mo)
@@ -297,7 +297,7 @@ func (pgs *PostgreSQLStorage) Withdrawals(user *model.User) (*[]model.Withdraw, 
 	return wdrsList, nil
 }
 
-func (pgs *PostgreSQLStorage) AccruralUpdate(order *model.Order) error {
+func (pgs *PostgreSQLStorage) AccruralUpdate(accrual *model.Accrual) error {
 	ctx, cancel := context.WithCancel(pgs.context)
 	defer cancel()
 
@@ -312,15 +312,15 @@ func (pgs *PostgreSQLStorage) AccruralUpdate(order *model.Order) error {
 		}
 	}()
 	args := pgx.NamedArgs{
-		"num":    order.Num,
-		"status": order.Status,
-		"acc":    order.Accrural,
+		"num":    accrual.Num,
+		"status": accrual.Status,
+		"acc":    accrual.Accrural,
 	}
 
 	_, errg := tx.ExecContext(ctx, accUpdate, args)
 	if errg != nil {
-		pgs.log.Printf("Error AccruralUpdate order num:[%v] query '%s' error: %v", order.Num, accUpdate, err)
-		return fmt.Errorf("error AccruralUpdate order num:[%v] query '%s' error: %v", order.Num, accUpdate, err)
+		pgs.log.Printf("Error AccruralUpdate order num:[%v] query '%s' error: %v", accrual.Num, accUpdate, err)
+		return fmt.Errorf("error AccruralUpdate order num:[%v] query '%s' error: %v", accrual.Num, accUpdate, err)
 	}
 
 	// шаг 4 — сохраняем изменения
@@ -331,7 +331,7 @@ func (pgs *PostgreSQLStorage) AccruralUpdate(order *model.Order) error {
 	return nil
 }
 
-func (pgs *PostgreSQLStorage) OrdersAcc() (*[]model.Order, error) {
+func (pgs *PostgreSQLStorage) OrdersAcc() ([]model.Order, error) {
 	ctx, cancel := context.WithTimeout(pgs.context, time.Second*5)
 	defer cancel()
 
@@ -359,5 +359,5 @@ func (pgs *PostgreSQLStorage) OrdersAcc() (*[]model.Order, error) {
 	if err != nil {
 		return nil, err
 	}
-	return ordersList, nil
+	return *ordersList, nil
 }

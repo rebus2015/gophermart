@@ -18,56 +18,50 @@ import (
 type middlewares struct {
 	r repository
 	l *logger.Logger
+	a auth
 }
 
 type repository interface {
 	UserLogin(user *model.User) (*model.User, error)
 }
 
-const compressed string = `gzip`
-
-func NewMiddlewares(_r repository, _l *logger.Logger) *middlewares {
-	return &middlewares{r: _r, l: _l}
+type auth interface {
+	CheckToken(tokenString string) (*model.User, error)
 }
 
-func (m *middlewares) BasicAuthMiddleware(next http.Handler) http.Handler {
+const compressed string = `gzip`
+
+func NewMiddlewares(repo repository, log *logger.Logger , auth auth) *middlewares {
+	return &middlewares{r: repo, l: log, a: auth}
+}
+
+func (m *middlewares) AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		username, password, ok := r.BasicAuth()
-		if !ok {
-			w.Header().Add("WWW-Authenticate", `Basic realm="Give username and password"`)
-			w.WriteHeader(http.StatusBadRequest)
-			_, err := w.Write([]byte(`{"message": "No basic auth present"}`))
-			if err != nil {
-				m.l.Err(err).Msgf("[BasicAuthMiddleware] Responce.Write returned error: %v", err)
-			}
-			return
-		}
-		usr := &model.User{
-			Login:    username,
-			Password: password,
-		}
-		expectedUser, err := m.r.UserLogin(usr)
+		c, err := r.Cookie("token")
 		if err != nil {
-			m.l.Error().Err(err).Msgf("failed to get auth params for user:%s", username)
-			w.WriteHeader(http.StatusInternalServerError)
-			_, err := w.Write([]byte(`{"message": "failed to get auth params for user due to database error"}`))
-			if err != nil {
-				m.l.Err(err).Msgf("[BasicAuthMiddleware] Responce.Write returned error: %v", err)
+			if err == http.ErrNoCookie {
+				// If the cookie is not set, return an unauthorized status
+				w.WriteHeader(http.StatusUnauthorized)
+				return
 			}
+			// For any other type of error, return a bad request status
+			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
-		if utils.CheckPasswordHash(password, string(expectedUser.Hash)) {
-			m.l.Info().Msgf("user '%s' is successfully authorized", username)
-			usr.ID = expectedUser.ID
-			ctx := context.WithValue(r.Context(), keys.UserContextKey{}, usr)
-			next.ServeHTTP(w, r.WithContext(ctx))
-			return
+		// Get the JWT string from the cookie
+		tknStr := c.Value
+		user, err := m.a.CheckToken(tknStr)
+		if err != nil {
+			if err == http.ErrAbortHandler {
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+			w.WriteHeader(http.StatusBadRequest)
 		}
 
-		m.l.Info().Msgf("user '%s' is NOT authorized", username)
-		w.Header().Set("WWW-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		ctx := context.WithValue(r.Context(), keys.UserContextKey{}, user)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
@@ -274,7 +268,7 @@ func (m *middlewares) OrderTexMiddleware(next http.Handler) http.Handler {
 			return
 		}
 		if !utils.Valid(orderNum) {
-			w.WriteHeader(http.StatusConflict)
+			w.WriteHeader(http.StatusUnprocessableEntity)
 			_, err := w.Write([]byte(fmt.Sprintf("Error order format mismatch on Luhn check: %v", string(number))))
 			if err != nil {
 				m.l.Err(err).Msgf("[OrderTexMiddleware] Responce.Write returned error: %v", err)

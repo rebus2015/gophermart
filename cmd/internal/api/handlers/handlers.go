@@ -21,25 +21,25 @@ type repository interface {
 	Withdrawals(user *model.User) (*[]model.Withdraw, error)
 }
 
-type memstorage interface {
-	Add(order *model.Order)
+type auth interface {
+	CreateToken(usr *model.User, expirationTime time.Time) (string, error)
 }
 
-func NewAPI(_repo repository, _log *logger.Logger, _ms memstorage) *api {
-	return &api{repo: _repo, log: _log, ms: _ms}
+func NewAPI(r repository, l *logger.Logger, a auth) *api {
+	return &api{repo: r, log: l, auth: a}
 }
 
 type api struct {
 	repo repository
 	log  *logger.Logger
-	ms   memstorage
+	auth auth
 }
 
-func (a *api) UserRegisterHandler(w http.ResponseWriter, r *http.Request) {
+func (a *api) UserRegister(w http.ResponseWriter, r *http.Request) {
 	user, ok := r.Context().Value(keys.UserContextKey{}).(*model.User)
 	if !ok {
 		a.log.Printf(
-			"Error: [UserRegisterHandler] User info not found in context status-'500'",
+			"Error: [UserRegister] User info not found in context status-'500'",
 		)
 		http.Error(w, "User info not found in context", http.StatusInternalServerError)
 		return
@@ -47,25 +47,39 @@ func (a *api) UserRegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 	id, err := a.repo.UserRegister(user)
 	if err != nil { //ошибка запроса 500
-		a.log.Err(err).Msg("UserRegisterHandler failed to register, database error")
+		a.log.Err(err).Msg("UserRegister failed to register, database error")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	if id == "" { //такой уже есть 409
-		a.log.Err(err).Msgf("UserRegisterHandler failed, login [%s] is busy", user.Login)
+		a.log.Err(err).Msgf("UserRegister failed, login [%s] is busy", user.Login)
 		w.WriteHeader(http.StatusConflict)
 		return
 	}
+	user.ID = id
+
+	expirationTime := time.Now().Add(5 * time.Hour)
+	tokenString, err := a.auth.CreateToken(user, expirationTime)
+	if err != nil {
+		a.log.Err(err).Msgf("UserRegister failed to create JWT toker for login [%s]", user.Login)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 	// иначе 200
+	http.SetCookie(w, &http.Cookie{
+		Name:    "token",
+		Value:   tokenString,
+		Expires: expirationTime,
+	})
 	w.WriteHeader(http.StatusOK)
 	a.log.Info().Msgf("User successfully registered: [%s]", user.Login)
 }
 
-func (a *api) UserLoginHandler(w http.ResponseWriter, r *http.Request) {
+func (a *api) UserLogin(w http.ResponseWriter, r *http.Request) {
 	user, ok := r.Context().Value(keys.UserContextKey{}).(*model.User)
 	if !ok {
 		a.log.Printf(
-			"Error: [UserLoginHandler] User info not found in context status-'500'",
+			"Error: [UserLogin] User info not found in context status-'500'",
 		)
 		http.Error(w, "User info not found in context", http.StatusInternalServerError)
 		return
@@ -73,30 +87,43 @@ func (a *api) UserLoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	userAcc, err := a.repo.UserLogin(user)
 	if err != nil { //ошибка запроса 500
-		a.log.Err(err).Msg("UserLoginHandler: failed to log in")
+		a.log.Err(err).Msg("UserLogin: failed to log in")
 		return
 	}
 	if userAcc == nil { //такого нет 401
-		a.log.Err(err).Msgf("UserLoginHandler: failed, login/pass [%s] failed", user.Login)
+		a.log.Err(err).Msgf("UserLogin: failed, login/pass [%s] failed", user.Login)
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 	pass := utils.CheckPasswordHash(user.Password, string(userAcc.Hash))
 	if !pass {
-		a.log.Err(err).Msgf("UserLoginHandler: failed, login/pass [%s] hash mismatch", user.Login)
+		a.log.Err(err).Msgf("UserLogin: failed, login/pass [%s] hash mismatch", user.Login)
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
+	expirationTime := time.Now().Add(5 * time.Minute)
+	tokenString, err := a.auth.CreateToken(userAcc, expirationTime)
+	if err != nil {
+		a.log.Err(err).Msgf("UserRegister failed to create JWT toker for login [%s]", user.Login)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	// иначе 200
+	http.SetCookie(w, &http.Cookie{
+		Name:    "token",
+		Value:   tokenString,
+		Expires: expirationTime,
+	})
 	// иначе 200
 	w.WriteHeader(http.StatusOK)
 	a.log.Info().Msgf("User successfully logged in: [%s]", user.Login)
 }
 
-func (a *api) UserOrderNewHandler(w http.ResponseWriter, r *http.Request) {
+func (a *api) UserOrderNew(w http.ResponseWriter, r *http.Request) {
 	orderNew, ok := r.Context().Value(keys.OrderContextKey{}).(*model.Order)
 	if !ok {
 		a.log.Printf(
-			"Error: [UserOrderNewHandler] Order info not found in context status-'500'",
+			"Error: [UserOrderNew] Order info not found in context status-'500'",
 		)
 		http.Error(w, "Order info not found in context", http.StatusInternalServerError)
 		return
@@ -110,14 +137,13 @@ func (a *api) UserOrderNewHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	id, err := a.repo.OrdersNew(&order)
 	if err != nil { //ошибка запроса 500
-		a.log.Err(err).Msg("UserRegisterHandler failed to register, database error")
+		a.log.Err(err).Msg("UserRegister failed to register, database error")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	switch id {
 	case "":
 		{
-			a.ms.Add(&order)
 			w.WriteHeader(http.StatusAccepted)
 			a.log.Info().Msgf("Order number [%v] successfully added", *order.Num)
 			return
@@ -135,18 +161,20 @@ func (a *api) UserOrderNewHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (a *api) OrdersAllHandler(w http.ResponseWriter, r *http.Request) {
+func (a *api) OrdersAll(w http.ResponseWriter, r *http.Request) {
 	user, ok := r.Context().Value(keys.UserContextKey{}).(*model.User)
+	w.Header().Set("Content-Type", "application/json")
 	if !ok {
 		a.log.Error().Msgf(
-			"Error: [OrdersAllHandler] User info not found in context status-'500'",
+			"Error: [OrdersAll] User info not found in context status-'500'",
 		)
 		http.Error(w, "User info not found in context", http.StatusInternalServerError)
 		return
 	}
+	a.log.Info().Msgf("[OrdersAll] Запросим из БД заказы для пользователя: %v", user.ID)
 	ordersList, err := a.repo.OrdersAll(user)
 	if err != nil { //ошибка запроса 500
-		a.log.Err(err).Msgf("OrdersAllHandler failed to get orders for user [%v], database error", user.Login)
+		a.log.Err(err).Msgf("OrdersAll failed to get orders for user [%v], database error", user.Login)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -155,29 +183,35 @@ func (a *api) OrdersAllHandler(w http.ResponseWriter, r *http.Request) {
 		a.log.Info().Msgf("No Orders were found for user [%v]", user.Login)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
+	a.log.Info().Msgf("[OrdersAll] Получено [%v] записей:", len(*ordersList))
+	b, err := json.Marshal(ordersList)
+	if err != nil {
+		a.log.Err(err).Msgf("ERROR Failed to Marshal ORDERS to JSON: [%+v]", ordersList)
+		return
+	}
+	a.log.Info().Msgf("GOT ORDERS FOM DB: %s", string(b))
+
 	w.WriteHeader(http.StatusOK)
 	encoder := json.NewEncoder(w)
 	err = encoder.Encode(ordersList)
 	if err != nil {
-		a.log.Err(err).Msgf("Error: [OrdersAllHandler] Result Json encode error :%v", err)
-		http.Error(w, "[OrdersAllHandler] Result Json encode error", http.StatusInternalServerError)
+		a.log.Err(err).Msgf("Error: [OrdersAll] Result Json encode error :%v", err)
+		http.Error(w, "[OrdersAll] Result Json encode error", http.StatusInternalServerError)
 	}
-	a.log.Debug().Msgf("Возвращаем OrdersJSON result :%v", ordersList)
 }
 
-func (a *api) BalanceHandler(w http.ResponseWriter, r *http.Request) {
+func (a *api) Balance(w http.ResponseWriter, r *http.Request) {
 	user, ok := r.Context().Value(keys.UserContextKey{}).(*model.User)
 	if !ok {
 		a.log.Error().Msgf(
-			"Error: [BalanceHandler] User info not found in context status-'500'",
+			"Error: [Balance] User info not found in context status-'500'",
 		)
 		http.Error(w, "User info not found in context", http.StatusInternalServerError)
 		return
 	}
 	balance, err := a.repo.Balance(user)
 	if err != nil { //ошибка запроса 500
-		a.log.Err(err).Msgf("BalanceHandler failed to get balance for user [%v], database error", user.Login)
+		a.log.Err(err).Msgf("Balance failed to get balance for user [%v], database error", user.Login)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -186,17 +220,17 @@ func (a *api) BalanceHandler(w http.ResponseWriter, r *http.Request) {
 	encoder := json.NewEncoder(w)
 	err = encoder.Encode(balance)
 	if err != nil {
-		a.log.Err(err).Msgf("Error: [BalanceHandler] Result Json encode error :%v", err)
-		http.Error(w, "[BalanceHandler] Result Json encode error", http.StatusInternalServerError)
+		a.log.Err(err).Msgf("Error: [Balance] Result Json encode error :%v", err)
+		http.Error(w, "[Balance] Result Json encode error", http.StatusInternalServerError)
 	}
 	a.log.Debug().Msgf("Возвращаем UpdateJSON result :%v", balance)
 }
 
-func (a *api) WithdrawHandler(w http.ResponseWriter, r *http.Request) {
+func (a *api) Withdraw(w http.ResponseWriter, r *http.Request) {
 	withdrawNew, ok := r.Context().Value(keys.WithdrwContextKey{}).(*model.Withdraw)
 	if !ok {
 		a.log.Printf(
-			"Error: [WithdrawHandler] Withdraw info not found in context status-'500'",
+			"Error: [Withdraw] Withdraw info not found in context status-'500'",
 		)
 		http.Error(w, "Withdraw info not found in context", http.StatusInternalServerError)
 		return
@@ -210,7 +244,7 @@ func (a *api) WithdrawHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	success, err := a.repo.Withdraw(&withdraw)
 	if err != nil { //ошибка запроса 500
-		a.log.Err(err).Msg("WithdrawHandler failed to register, database error")
+		a.log.Err(err).Msg("Withdraw failed to register, database error")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -224,18 +258,18 @@ func (a *api) WithdrawHandler(w http.ResponseWriter, r *http.Request) {
 	a.log.Info().Msgf("Withdraw order number [%v] successfully added", withdraw.Num)
 }
 
-func (a *api) WithdrawalsAllHandler(w http.ResponseWriter, r *http.Request) {
+func (a *api) WithdrawalsAll(w http.ResponseWriter, r *http.Request) {
 	user, ok := r.Context().Value(keys.UserContextKey{}).(*model.User)
 	if !ok {
 		a.log.Error().Msgf(
-			"Error: [WithdrawalsAllHandler] User info not found in context status-'500'",
+			"Error: [WithdrawalsAll] User info not found in context status-'500'",
 		)
 		http.Error(w, "User info not found in context", http.StatusInternalServerError)
 		return
 	}
 	wdrls, err := a.repo.Withdrawals(user)
 	if err != nil { //ошибка запроса 500
-		a.log.Err(err).Msgf("WithdrawalsAllHandler failed to get Withdrawals for user [%v], database error", user.Login)
+		a.log.Err(err).Msgf("WithdrawalsAll failed to get Withdrawals for user [%v], database error", user.Login)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

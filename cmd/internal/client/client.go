@@ -20,6 +20,8 @@ type AccrualClient struct {
 	lg      *logger.Logger
 	ctx     context.Context
 	client  *http.Client
+	ticker  time.Ticker
+	cool    chan int64
 }
 
 type config interface {
@@ -39,6 +41,7 @@ func NewClient(c context.Context, s dbStorage, conf config, logger *logger.Logge
 		cfg:     conf,
 		lg:      logger,
 		ctx:     c,
+		cool: make(chan int64),
 		client: &http.Client{
 			Transport: &http.Transport{IdleConnTimeout: 5 * time.Second},
 		},
@@ -50,12 +53,18 @@ func (ac *AccrualClient) Run() {
 	go ac.sndWorker(errCh)
 }
 
+func (ac *AccrualClient) coolDown(wait int64) {
+	go func(){
+		ac.cool<-wait
+	}()
+}
+
 func (ac *AccrualClient) sndWorker(errCh chan<- error) {
-	ticker := time.NewTicker(ac.cfg.GetSyncInterval())
+	ac.ticker = *time.NewTicker(ac.cfg.GetSyncInterval())
 	defer close(errCh)
 	for {
 		select {
-		case <-ticker.C:
+		case <-ac.ticker.C:
 			err := ac.updateSendMultiple()
 			if err != nil {
 				errCh <- fmt.Errorf("error update orders: %w", err)
@@ -96,11 +105,17 @@ func (ac *AccrualClient) updateSendMultiple() error {
 				continue
 			}
 			if r.Err != nil {
-				//time.Sleep(time.Minute * 1)
-				ac.lg.Printf("unexpected error: %v from worker on Job %v", r.Err, r.Descriptor)
+				time.Sleep(time.Minute * 1)
+				ac.lg.Err(r.Err).Msgf("unexpected error: %v from worker on Job %v", r.Err, r.Descriptor)
 			}
 			ac.lg.Printf("worker processed Job %v", r.Descriptor)
-
+		case wait := <-ac.cool:
+			{
+				wp.Stop()
+				ac.ticker.Stop()
+				time.Sleep(time.Duration(wait)*time.Second)
+				ac.ticker.Reset(ac.cfg.GetSyncInterval())
+			}
 		case <-wp.Done:
 			ac.lg.Printf("worker FINISHED")
 			return nil
@@ -154,8 +169,16 @@ func (ac *AccrualClient) sendreq(ctx context.Context, args agent.Args) error {
 	case http.StatusTooManyRequests:
 		{
 			ac.lg.Error().Msgf("[AccrualService] responce error, status [%v] for order [%v]", response.StatusCode, *args.Order.Num)
-			_, err := io.ReadAll(response.Body)
+			waitString := response.Header.Get("Retry-After")
+			ac.lg.Info().Msgf("[AccrualService] responce status [%v] Retry-After [%s]", response.StatusCode, waitString)
+			w,err :=strconv.ParseInt(waitString,10,32) 
 			if err != nil {
+				ac.lg.Printf("Failed to process wait interval for COOLDOWN: %v", err)
+				return err
+			}
+			ac.coolDown(w)
+			_, err1 := io.ReadAll(response.Body)
+			if err1 != nil {
 				ac.lg.Printf("Read response body error: %v", err)
 				return err
 			}

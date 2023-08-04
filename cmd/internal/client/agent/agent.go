@@ -35,8 +35,7 @@ type WorkerPool struct {
 	jobs         chan Job
 	errCh        chan Result
 	Done         chan struct{}
-	Cancel       chan bool
-	wg           sync.WaitGroup
+	Cancel       chan bool	
 	workersCtx   context.Context
 }
 
@@ -52,11 +51,12 @@ func New(wcount int, lg *logger.Logger) *WorkerPool {
 }
 
 func (wp *WorkerPool) Run(ctx context.Context) {
+	var wg sync.WaitGroup
 	for i := 0; i < wp.workersCount; i++ {
-		wp.wg.Add(1)
-		go worker(wp.workersCtx, &wp.wg, wp.jobs, wp.errCh, wp.Cancel, wp.log)
+		wg.Add(1)
+		go worker(ctx, &wg, wp.jobs, wp.errCh, wp.Cancel, wp.log)
 	}
-	wp.wg.Wait()
+	wg.Wait()
 	close(wp.Done)
 	close(wp.errCh)
 	close(wp.Cancel)

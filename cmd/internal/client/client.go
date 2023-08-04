@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/hashicorp/go-retryablehttp"
+
 	"github.com/rebus2015/gophermart/cmd/internal/client/agent"
 	"github.com/rebus2015/gophermart/cmd/internal/logger"
 	"github.com/rebus2015/gophermart/cmd/internal/model"
@@ -19,7 +21,7 @@ type AccrualClient struct {
 	cfg     config
 	lg      *logger.Logger
 	ctx     context.Context
-	client  *http.Client
+	client  *retryablehttp.Client
 	ticker  time.Ticker
 	cool    chan int64
 }
@@ -42,8 +44,9 @@ func NewClient(c context.Context, s dbStorage, conf config, logger *logger.Logge
 		lg:      logger,
 		ctx:     c,
 		cool: make(chan int64, conf.GetRateLimit()),
-		client: &http.Client{
-			Transport: &http.Transport{IdleConnTimeout: 5 * time.Second},
+		client: &retryablehttp.Client{ 
+			RetryMax: 3,
+			RetryWaitMin: 1,	
 		},
 	}
 }
@@ -127,7 +130,7 @@ func (ac *AccrualClient) sendreq(ctx context.Context, args agent.Args) error {
 	queryurl := ac.cfg.GetAccruralAddr() + "/api/orders/" + strconv.FormatInt(*args.Order.Num, 10)
 	ac.lg.Info().Msgf("Create Request Url: %s", queryurl)
 
-	r, err := http.NewRequestWithContext(ac.ctx, http.MethodGet, queryurl, nil)
+	r, err := retryablehttp.NewRequestWithContext(ac.ctx, http.MethodGet, queryurl,nil)
 	if err != nil {
 		ac.lg.Err(err).Msgf("Create Request failed! with error: %v\n", err)
 		return err

@@ -12,7 +12,7 @@ import (
 	"github.com/rebus2015/gophermart/cmd/internal/client"
 	"github.com/rebus2015/gophermart/cmd/internal/config"
 	"github.com/rebus2015/gophermart/cmd/internal/logger"
-	m "github.com/rebus2015/gophermart/cmd/internal/migrations"
+	"github.com/rebus2015/gophermart/cmd/internal/migrations"
 	"github.com/rebus2015/gophermart/cmd/internal/router"
 	"github.com/rebus2015/gophermart/cmd/internal/storage/dbstorage"
 )
@@ -27,7 +27,7 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	err = m.RunMigrations(lg, cfg)
+	err = migrations.RunMigrations(lg, cfg)
 	if err != nil {
 		lg.Fatal().Err(err).Msgf("Migrations retuned error")
 		return

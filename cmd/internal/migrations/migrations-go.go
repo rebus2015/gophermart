@@ -30,7 +30,7 @@ func RunMigrations(lg *logger.Logger, config dbConfig) error {
 
 	defer func() {
 		if err := db.Close(); err != nil {
-			lg.Error().Err(err).Msgf("goose: failed to open DB: %v\n", config.GetDBConnection())
+			lg.Error().Err(err).Msgf("goose: failed to close DB: %v\n", config.GetDBConnection())
 		}
 	}()
 	lg.Info().Msg("goose: attempt Up migrations")

@@ -31,8 +31,8 @@ type auth interface {
 
 const compressed string = `gzip`
 
-func NewMiddlewares(_r repository, _l *logger.Logger , _a auth) *middlewares {
-	return &middlewares{r: _r, l: _l, a: _a}
+func NewMiddlewares(repo repository, log *logger.Logger , auth auth) *middlewares {
+	return &middlewares{r: repo, l: log, a: auth}
 }
 
 func (m *middlewares) AuthMiddleware(next http.Handler) http.Handler {

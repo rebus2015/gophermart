@@ -11,13 +11,13 @@ import (
 )
 
 type apiHandlers interface {
-	UserRegisterHandler(w http.ResponseWriter, r *http.Request)
-	UserLoginHandler(w http.ResponseWriter, r *http.Request)
-	UserOrderNewHandler(w http.ResponseWriter, r *http.Request)
-	OrdersAllHandler(w http.ResponseWriter, r *http.Request)
-	BalanceHandler(w http.ResponseWriter, r *http.Request)
-	WithdrawHandler(w http.ResponseWriter, r *http.Request)
-	WithdrawalsAllHandler(w http.ResponseWriter, r *http.Request)
+	UserRegister(w http.ResponseWriter, r *http.Request)
+	UserLogin(w http.ResponseWriter, r *http.Request)
+	UserOrderNew(w http.ResponseWriter, r *http.Request)
+	OrdersAll(w http.ResponseWriter, r *http.Request)
+	Balance(w http.ResponseWriter, r *http.Request)
+	Withdraw(w http.ResponseWriter, r *http.Request)
+	WithdrawalsAll(w http.ResponseWriter, r *http.Request)
 }
 
 type apiMiddleware interface {
@@ -36,19 +36,19 @@ func NewRouter(m apiMiddleware, h apiHandlers) chi.Router {
 
 	r.Route("/api/user/", func(r chi.Router) {
 		r.With(m.UserJSONMiddleware).
-			Post("/register", h.UserRegisterHandler)
+			Post("/register", h.UserRegister)
 		r.With(m.UserJSONMiddleware).
-			Post("/login", h.UserLoginHandler)
+			Post("/login", h.UserLogin)
 		r.Route("/", func(r chi.Router) {
 			r.Use(m.AuthMiddleware)
-			r.Get("/withdrawals", h.WithdrawalsAllHandler)
+			r.Get("/withdrawals", h.WithdrawalsAll)
 			r.With(m.OrderTexMiddleware).
-				Post("/orders", h.UserOrderNewHandler)
-			r.Get("/orders", h.OrdersAllHandler)
+				Post("/orders", h.UserOrderNew)
+			r.Get("/orders", h.OrdersAll)
 			r.Route("/balance", func(r chi.Router) {
-				r.Get("/", h.BalanceHandler)				
+				r.Get("/", h.Balance)				
 				r.With(m.WithdrawJSONMiddleware).
-					Post("/withdraw", h.WithdrawHandler)
+					Post("/withdraw", h.Withdraw)
 			})
 
 		})

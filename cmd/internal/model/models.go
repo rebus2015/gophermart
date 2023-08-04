@@ -53,12 +53,12 @@ type Withdraw struct {
 func (w *Withdraw) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
 		UserID  string   `json:"userid,omitempty"`
-		Num     *int64   `json:"order"`
+		Num     string   `json:"order"`
 		Expence *float64 `json:"sum"`
 		Ins     string   `json:"processed_at,omitempty"`
 	}{
 		UserID:  w.UserID,
-		Num:     w.Num,
+		Num:     strconv.FormatInt(*w.Num, 10),
 		Expence: w.Expence,
 		Ins:     w.Ins.Format(time.RFC3339),
 	})
@@ -72,16 +72,13 @@ func (w *Withdraw) UnmarshalJSON(data []byte) error {
 	}{
 		Alias: (*Alias)(w),
 	}
-
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return err
 	}
-
 	num, err := strconv.ParseInt(aux.NumStr, 10, 64)
 	if err != nil {
 		return err
 	}
-
 	w.Num = &num
 	return nil
 }

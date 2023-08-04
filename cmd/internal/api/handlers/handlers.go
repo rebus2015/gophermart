@@ -21,14 +21,6 @@ type repository interface {
 	Withdrawals(user *model.User) (*[]model.Withdraw, error)
 }
 
-type memstorage interface {
-	Add(order *model.Order)
-}
-
-type config interface {
-	GetSecretKey() []byte
-}
-
 type auth interface {
 	CreateToken(usr *model.User, expirationTime time.Time) (string, error)
 }
